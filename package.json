@@ -1,0 +1,62 @@
+{
+  "name": "bhootos",
+  "version": "0.1.0",
+  "description": "A terminal foundation for a haunted interactive-fiction runtime.",
+  "type": "module",
+  "bin": {
+    "bhootos": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.15.4",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MadB0i/BhootOS.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MadB0i/BhootOS/issues"
+  },
+  "homepage": "https://github.com/MadB0i/BhootOS#readme",
+  "author": "Rupjyoti Talukdar",
+  "keywords": [
+    "terminal",
+    "cli",
+    "horror",
+    "interactive-fiction",
+    "game-engine",
+    "haunted",
+    "narrative",
+    "text-adventure"
+  ],
+  "scripts": {
+    "dev": "tsx watch src/cli.ts",
+    "build": "tsup",
+    "start": "node dist/cli.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify:dist": "node scripts/verify-dist.mjs",
+    "verify:package": "node scripts/verify-package.mjs",
+    "check": "tsc --noEmit && vitest run && tsup && node scripts/verify-dist.mjs && node scripts/verify-package.mjs",
+    "prepack": "tsup",
+    "prepublishOnly": "npm run check"
+  },
+  "dependencies": {
+    "chalk": "^5.0.0",
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT"
+}
