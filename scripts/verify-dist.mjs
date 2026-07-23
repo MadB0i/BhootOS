@@ -37,6 +37,10 @@ assert(
   declarationSource.includes("transitionStory"),
   "library declarations must contain transitionStory",
 );
+assert(
+  !declarationSource.includes("StoryViewRenderer"),
+  "library declarations must not expose terminal presentation internals",
+);
 
 const publicApi = await import(pathToFileURL(libraryFile).href);
 assert(

@@ -57,6 +57,14 @@ export class TerminalRenderer {
     this.stderr(text + "\n");
   }
 
+  writeTitleLine(text: string): void {
+    this.writeLine(this.theme.title(text));
+  }
+
+  writeDangerError(text: string): void {
+    this.stderr(this.theme.danger(text) + "\n");
+  }
+
   clear(): void {
     if (this.caps.supportsTerminalControl) {
       this.stdout("\u001b[2J\u001b[3J\u001b[H");

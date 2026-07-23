@@ -17,9 +17,11 @@ The current release provides:
 - deterministic in-memory story traversal
 - immutable session snapshots with traversal history
 - choice selection by ID with typed failure outcomes
+- an internal capability-aware terminal presenter for engine views
 
-It does not yet include interactive terminal gameplay, story rendering, input
-controls, inventory, saves or the planned **Kaun Hai?** episode.
+It does not yet include an interactive terminal gameplay loop, input
+orchestration, input controls, inventory, saves or the planned **Kaun Hai?**
+episode.
 
 ## Requirements
 
@@ -78,6 +80,13 @@ invalid commands return typed failures. See
 semantics.
 
 This release has no terminal gameplay loop or built-in episode.
+
+Engine views can be rendered by the internal terminal presentation layer with
+the existing color, Unicode, fast-output, reduced-motion, typewriter, and
+cancellation behavior. It presents narrative, numbered choices, endings, and
+typed transition failures without exposing target node IDs. See
+[`docs/story-presentation.md`](docs/story-presentation.md). Input and gameplay
+orchestration are not implemented.
 
 ## License
 
