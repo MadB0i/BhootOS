@@ -38,6 +38,9 @@ const expected = [
   "README.md",
   "dist/cli.js",
   "dist/cli.js.map",
+  "dist/index.d.ts",
+  "dist/index.js",
+  "dist/index.js.map",
   "package.json",
 ];
 

@@ -4,16 +4,18 @@ import { defineConfig } from "tsup";
 const packageVersion = readPackageVersion();
 
 export default defineConfig({
-  entry: ["src/cli.ts"],
+  entry: {
+    cli: "src/cli.ts",
+    index: "src/index.ts",
+  },
   format: ["esm"],
   outDir: "dist",
-  dts: false,
+  dts: {
+    entry: "src/index.ts",
+  },
   sourcemap: true,
   clean: true,
   shims: false,
-  banner: {
-    js: "#!/usr/bin/env node",
-  },
   platform: "node",
   target: "node20",
   bundle: true,

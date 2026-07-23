@@ -1,11 +1,16 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 const cliPath = new URL("../dist/cli.js", import.meta.url);
 const cliFile = fileURLToPath(cliPath);
 const cliSource = readFileSync(cliPath, "utf8");
+const libraryFile = fileURLToPath(new URL("../dist/index.js", import.meta.url));
+const declarationSource = readFileSync(
+  new URL("../dist/index.d.ts", import.meta.url),
+  "utf8",
+);
 
 assert(cliSource.startsWith("#!/usr/bin/env node\n"), "built CLI must start with one shebang");
 assert(
@@ -16,6 +21,35 @@ assert(
   cliSource.match(/sourceMappingURL=cli\.js\.map/g)?.length === 1,
   "built CLI must contain exactly one source-map reference",
 );
+assert(
+  declarationSource.includes("interface StoryDocumentV1"),
+  "library declarations must contain StoryDocumentV1",
+);
+assert(
+  declarationSource.includes("parseStoryJson"),
+  "library declarations must contain parseStoryJson",
+);
+
+const publicApi = await import(pathToFileURL(libraryFile).href);
+assert(
+  JSON.stringify(Object.keys(publicApi).sort()) ===
+    JSON.stringify([
+      "parseStoryDocument",
+      "parseStoryJson",
+      "validateStoryDocument",
+    ]),
+  "built library must expose only the supported runtime story API",
+);
+const parsedStory = publicApi.parseStoryJson(
+  '{"schemaVersion":1,"id":"verify-story","title":"Verify","entryNodeId":"start","nodes":[{"id":"start","text":"Done.","ending":{"id":"done","title":"Done"}}]}',
+);
+assert(parsedStory.ok === true, "built parseStoryJson must parse a valid story");
+if (parsedStory.ok) {
+  assert(
+    publicApi.validateStoryDocument(parsedStory.story).ok === true,
+    "built validateStoryDocument must validate a parsed story",
+  );
+}
 
 const help = run(["--help"]);
 assert(help.status === 0, "--help must exit 0");

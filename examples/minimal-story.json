@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "minimal-story",
+  "title": "Minimal Story",
+  "description": "A tiny example story.",
+  "entryNodeId": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "text": "The door is open.",
+      "choices": [
+        {
+          "id": "enter",
+          "label": "Enter",
+          "nextNodeId": "ending-safe"
+        }
+      ]
+    },
+    {
+      "id": "ending-safe",
+      "text": "You made it outside.",
+      "ending": {
+        "id": "safe",
+        "title": "Safe"
+      }
+    }
+  ]
+}

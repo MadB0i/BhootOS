@@ -10,9 +10,13 @@ The current release provides:
 - color, reduced-motion and fast-output controls
 - cancellable typewriter timing
 - a `doctor` command for inspecting terminal behavior
+- a versioned Story Document v1 JSON format
+- deterministic static story-graph validation
+- an importable TypeScript story API with declarations
+- a validated minimal example story
 
-It does not yet include a story engine, story packs, choices, inventory, saves
-or the planned **Kaun Hai?** episode.
+It does not yet include an interactive story runtime, terminal story rendering,
+story controls, inventory, saves or the planned **Kaun Hai?** episode.
 
 ## Requirements
 
@@ -30,8 +34,8 @@ pnpm build
 pnpm check
 ```
 
-`pnpm check` typechecks source and tests, runs the test suite, builds the CLI,
-executes built-artifact smoke tests and inspects the package dry run.
+`pnpm check` typechecks source and tests, runs the test suite, builds the CLI and
+library, executes built-artifact smoke tests and inspects the package dry run.
 
 ## CLI
 
@@ -43,11 +47,25 @@ bhootos doctor --no-color --ascii
 
 Global options may appear before or after `doctor`.
 
-## Direction
+## Story Document API
 
-The long-term goal is a reusable, JSON-driven terminal narrative runtime for
-story authors. Story schemas and runtime features are intentionally outside the
-current foundation.
+```ts
+import {
+  parseStoryJson,
+  validateStoryDocument,
+  type StoryDocumentV1,
+} from "bhootos";
+```
+
+The API parses unknown data without throwing for expected validation failures,
+returns path-aware diagnostics, and validates references and reachability in a
+Story Document v1 graph. See
+[`docs/story-format-v1.md`](docs/story-format-v1.md) for the field reference and
+[`examples/minimal-story.json`](examples/minimal-story.json) for a valid minimal
+document.
+
+This release defines and validates stories only. Gameplay and the built-in
+episode remain future work.
 
 ## License
 

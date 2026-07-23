@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { runCli } from "./cli-program.js";
 
 declare const __BHOOTOS_VERSION__: string;
