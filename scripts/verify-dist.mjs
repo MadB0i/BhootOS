@@ -29,19 +29,30 @@ assert(
   declarationSource.includes("parseStoryJson"),
   "library declarations must contain parseStoryJson",
 );
+assert(
+  declarationSource.includes("interface StorySession"),
+  "library declarations must contain StorySession",
+);
+assert(
+  declarationSource.includes("transitionStory"),
+  "library declarations must contain transitionStory",
+);
 
 const publicApi = await import(pathToFileURL(libraryFile).href);
 assert(
   JSON.stringify(Object.keys(publicApi).sort()) ===
     JSON.stringify([
+      "createStorySession",
+      "getStoryView",
       "parseStoryDocument",
       "parseStoryJson",
+      "transitionStory",
       "validateStoryDocument",
     ]),
-  "built library must expose only the supported runtime story API",
+  "built library must expose only the supported story and engine runtime API",
 );
 const parsedStory = publicApi.parseStoryJson(
-  '{"schemaVersion":1,"id":"verify-story","title":"Verify","entryNodeId":"start","nodes":[{"id":"start","text":"Done.","ending":{"id":"done","title":"Done"}}]}',
+  '{"schemaVersion":1,"id":"verify-story","title":"Verify","entryNodeId":"start","nodes":[{"id":"start","text":"Choose.","choices":[{"id":"finish","label":"Finish","nextNodeId":"ending"}]},{"id":"ending","text":"Done.","ending":{"id":"done","title":"Done"}}]}',
 );
 assert(parsedStory.ok === true, "built parseStoryJson must parse a valid story");
 if (parsedStory.ok) {
@@ -49,6 +60,37 @@ if (parsedStory.ok) {
     publicApi.validateStoryDocument(parsedStory.story).ok === true,
     "built validateStoryDocument must validate a parsed story",
   );
+  const created = publicApi.createStorySession(parsedStory.story);
+  assert(created.ok === true, "built createStorySession must create a session");
+  if (created.ok) {
+    const activeView = publicApi.getStoryView(parsedStory.story, created.session);
+    assert(
+      activeView.ok === true && activeView.view.status === "active",
+      "built getStoryView must return an active view",
+    );
+    if (activeView.ok && activeView.view.status === "active") {
+      assert(
+        activeView.view.choices.length === 1 &&
+          activeView.view.choices[0]?.id === "finish" &&
+          !("nextNodeId" in activeView.view.choices[0]),
+        "active view must expose the choice without its target",
+      );
+    }
+
+    const transitioned = publicApi.transitionStory(
+      parsedStory.story,
+      created.session,
+      { type: "select-choice", choiceId: "finish" },
+    );
+    assert(
+      transitioned.ok === true &&
+        transitioned.session.status === "ended" &&
+        transitioned.session.endingId === "done" &&
+        transitioned.session.step === 1 &&
+        transitioned.session.history.length === 1,
+      "built transitionStory must reach the ending and record history",
+    );
+  }
 }
 
 const help = run(["--help"]);
@@ -85,7 +127,7 @@ for (const args of [["bogus"], ["doctor", "bogus"]]) {
   assert(result.status !== 0, `${args.join(" ")} must reject unsupported arguments`);
 }
 
-process.stdout.write("Built CLI verification passed.\n");
+process.stdout.write("Built CLI and public API verification passed.\n");
 
 function run(args, extraEnv = {}) {
   const result = spawnSync(process.execPath, [cliFile, ...args], {

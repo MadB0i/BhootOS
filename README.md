@@ -14,9 +14,12 @@ The current release provides:
 - deterministic static story-graph validation
 - an importable TypeScript story API with declarations
 - a validated minimal example story
+- deterministic in-memory story traversal
+- immutable session snapshots with traversal history
+- choice selection by ID with typed failure outcomes
 
-It does not yet include an interactive story runtime, terminal story rendering,
-story controls, inventory, saves or the planned **Kaun Hai?** episode.
+It does not yet include interactive terminal gameplay, story rendering, input
+controls, inventory, saves or the planned **Kaun Hai?** episode.
 
 ## Requirements
 
@@ -51,7 +54,10 @@ Global options may appear before or after `doctor`.
 
 ```ts
 import {
+  createStorySession,
+  getStoryView,
   parseStoryJson,
+  transitionStory,
   validateStoryDocument,
   type StoryDocumentV1,
 } from "bhootos";
@@ -64,8 +70,14 @@ Story Document v1 graph. See
 [`examples/minimal-story.json`](examples/minimal-story.json) for a valid minimal
 document.
 
-This release defines and validates stories only. Gameplay and the built-in
-episode remain future work.
+The in-memory engine starts validated stories, exposes player-safe active or
+ending views, selects choices by ID, and returns a new immutable session with
+history for every successful transition. Forged or mismatched sessions and
+invalid commands return typed failures. See
+[`docs/engine-api.md`](docs/engine-api.md) for the complete API and transition
+semantics.
+
+This release has no terminal gameplay loop or built-in episode.
 
 ## License
 

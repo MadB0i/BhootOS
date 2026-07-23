@@ -6,8 +6,11 @@ import type { StoryDocumentV1 } from "../src/index.js";
 describe("public story API", () => {
   it("exposes only the intended runtime functions", () => {
     expect(Object.keys(publicApi).sort()).toEqual([
+      "createStorySession",
+      "getStoryView",
       "parseStoryDocument",
       "parseStoryJson",
+      "transitionStory",
       "validateStoryDocument",
     ]);
     expect("TerminalRenderer" in publicApi).toBe(false);
