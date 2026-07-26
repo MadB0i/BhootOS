@@ -21,9 +21,10 @@ The current release provides:
 - reusable one-line input and numbered-choice selection boundaries
 - an injected, deterministic in-memory gameplay orchestrator
 - validated story loading through an injected text-reader boundary
+- an explicit-file `play` command composing loading and terminal gameplay
 
-It does not yet include a CLI story command, filesystem story loading, raw
-input controls, inventory, saves or the planned **Kaun Hai?** episode.
+It does not include story discovery, raw input controls, inventory, saves or
+the planned **Kaun Hai?** episode.
 
 ## Requirements
 
@@ -50,9 +51,14 @@ library, executes built-artifact smoke tests and inspects the package dry run.
 bhootos --fast --no-color --ascii
 bhootos doctor
 bhootos doctor --no-color --ascii
+bhootos play ./examples/minimal-story.json
+bhootos play ./examples/minimal-story.json --fast --no-color --ascii
 ```
 
-Global options may appear before or after `doctor`.
+Global options may appear before or after `doctor` or `play`. `play` requires
+exactly one explicit Story Document v1 JSON path. See
+[`docs/play-command.md`](docs/play-command.md) for output and exit-code
+semantics.
 
 ## Story Document API
 
@@ -87,7 +93,7 @@ invalid commands return typed failures. See
 [`docs/engine-api.md`](docs/engine-api.md) for the complete API and transition
 semantics.
 
-This release has no terminal gameplay loop or built-in episode.
+This release has no built-in episode.
 
 Engine views can be rendered by the internal terminal presentation layer with
 the existing color, Unicode, fast-output, reduced-motion, typewriter, and
@@ -108,14 +114,12 @@ sessions, bounded invalid-input retries, EOF, cancellation, cycles, and ending
 results without accessing files or process streams. See
 [`docs/gameplay-api.md`](docs/gameplay-api.md).
 
-BhootOS still has no `play` command; invoking its CLI does not play a story.
-
 `loadStory` reads text through an injected platform-neutral reader, enforces a
 configurable 1 MiB default limit, and reuses the existing JSON parser and graph
 validator. It preserves source names and document diagnostic paths while
 keeping the Node filesystem adapter internal. See
-[`docs/story-loading.md`](docs/story-loading.md). Story files still cannot be
-played through the CLI.
+[`docs/story-loading.md`](docs/story-loading.md). The CLI composes that internal
+adapter only for the explicit path supplied to `play`.
 
 ## License
 

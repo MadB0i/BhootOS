@@ -1,6 +1,9 @@
 import { Command, CommanderError } from "commander";
 import { doctorReport, runApp } from "./app.js";
-import { detectTerminalCapabilities } from "./terminal/capabilities.js";
+import {
+  detectTerminalCapabilities,
+  type TerminalCapabilities,
+} from "./terminal/capabilities.js";
 
 interface CliOptions {
   readonly color: boolean;
@@ -18,14 +21,27 @@ export interface CliRuntime {
   readonly nodeVersion: string;
   readonly stdout: (text: string) => void;
   readonly stderr: (text: string) => void;
+  readonly playStory: (
+    sourceName: string,
+    options: {
+      readonly capabilities: TerminalCapabilities;
+      readonly fast: boolean;
+      readonly signal: AbortSignal;
+    },
+  ) => Promise<number>;
+  readonly addSigintListener: (listener: () => void) => void;
+  readonly removeSigintListener: (listener: () => void) => void;
 }
 
 export async function runCli(runtime: CliRuntime): Promise<number> {
-  const program = createProgram(runtime);
+  let commandExitCode = 0;
+  const program = createProgram(runtime, (exitCode) => {
+    commandExitCode = exitCode;
+  });
 
   try {
     await program.parseAsync([...runtime.argv]);
-    return 0;
+    return commandExitCode;
   } catch (error: unknown) {
     if (error instanceof CommanderError) {
       return error.exitCode;
@@ -36,7 +52,10 @@ export async function runCli(runtime: CliRuntime): Promise<number> {
   }
 }
 
-function createProgram(runtime: CliRuntime): Command {
+function createProgram(
+  runtime: CliRuntime,
+  setExitCode: (exitCode: number) => void,
+): Command {
   const program = new Command()
     .name("bhootos")
     .description("A terminal foundation for a haunted interactive-fiction runtime.")
@@ -65,6 +84,35 @@ function createProgram(runtime: CliRuntime): Command {
       await executeProgram(runtime, true, command.optsWithGlobals<CliOptions>());
     });
 
+  program
+    .command("play")
+    .description("play a story from an explicit JSON file")
+    .argument("<story-file>", "path to a BhootOS story JSON file")
+    .allowExcessArguments(false)
+    .action(async (storyFile: string, _options, command: Command) => {
+      const options = command.optsWithGlobals<CliOptions>();
+      const capabilities = detectCapabilities(runtime, options);
+      const controller = new AbortController();
+      const onSigint = (): void => {
+        if (!controller.signal.aborted) {
+          controller.abort();
+        }
+      };
+
+      runtime.addSigintListener(onSigint);
+      try {
+        setExitCode(
+          await runtime.playStory(storyFile, {
+            capabilities,
+            fast: options.fast === true,
+            signal: controller.signal,
+          }),
+        );
+      } finally {
+        runtime.removeSigintListener(onSigint);
+      }
+    });
+
   return program;
 }
 
@@ -73,14 +121,7 @@ async function executeProgram(
   isDoctor: boolean,
   options: CliOptions,
 ): Promise<void> {
-  const capabilities = detectTerminalCapabilities({
-    isTTY: runtime.isTTY,
-    env: runtime.env,
-    platform: runtime.platform,
-    noColor: options.color === false,
-    forceAscii: options.ascii === true,
-    reducedMotion: options.reducedMotion === true,
-  });
+  const capabilities = detectCapabilities(runtime, options);
   const io = {
     stdout: runtime.stdout,
     stderr: runtime.stderr,
@@ -100,6 +141,20 @@ async function executeProgram(
     io,
     capabilities,
     fast: options.fast === true,
+  });
+}
+
+function detectCapabilities(
+  runtime: CliRuntime,
+  options: CliOptions,
+): TerminalCapabilities {
+  return detectTerminalCapabilities({
+    isTTY: runtime.isTTY,
+    env: runtime.env,
+    platform: runtime.platform,
+    noColor: options.color === false,
+    forceAscii: options.ascii === true,
+    reducedMotion: options.reducedMotion === true,
   });
 }
 

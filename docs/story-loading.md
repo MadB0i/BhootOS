@@ -1,10 +1,9 @@
 # Story loading
 
 BhootOS provides a platform-neutral boundary for reading text, parsing Story
-Document v1 JSON, and returning a validated immutable story. Loading is
-separate from gameplay, presentation, and the CLI.
-
-There is no `bhootos play` command yet.
+Document v1 JSON, and returning a validated immutable story. Loading remains
+separate from gameplay and presentation; the CLI composes those boundaries in
+its internal `play` command adapter.
 
 ## Reader boundary
 
@@ -168,8 +167,8 @@ allowed. This boundary is not a security sandbox: the caller explicitly
 chooses the path.
 
 The package root and `dist/index.js` do not import `node:fs`; no `bhootos/node`
-subpath is published. A future CLI can compose the internal adapter without
-expanding the platform-neutral public surface.
+subpath is published. The CLI composes the internal adapter without expanding
+the platform-neutral public surface.
 
-BhootOS can validate loaded stories through its library API, but it cannot play
-story files from the CLI yet.
+`bhootos play <story-file>` uses this adapter for exactly the supplied path.
+See [`play-command.md`](play-command.md).

@@ -1,5 +1,12 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
@@ -8,6 +15,12 @@ const cliFile = fileURLToPath(cliPath);
 const cliSource = readFileSync(cliPath, "utf8");
 const libraryFile = fileURLToPath(new URL("../dist/index.js", import.meta.url));
 const librarySource = readFileSync(libraryFile, "utf8");
+const libraryDependencySources = [
+  ...librarySource.matchAll(/from "(\.\/[^"]+\.js)"/gu),
+].map((match) =>
+  readFileSync(new URL(match[1], new URL("../dist/index.js", import.meta.url)), "utf8"),
+);
+const libraryBundleSource = [librarySource, ...libraryDependencySources].join("\n");
 const declarationSource = readFileSync(
   new URL("../dist/index.d.ts", import.meta.url),
   "utf8",
@@ -107,12 +120,33 @@ assert(
   "library declarations must not expose the test filesystem boundary",
 );
 assert(
-  !librarySource.includes("node:fs"),
+  !declarationSource.includes("PlayCommandDependencies") &&
+    !declarationSource.includes("executePlayCommand") &&
+    !declarationSource.includes("PLAY_EXIT_CODES"),
+  "library declarations must not expose play command internals",
+);
+assert(
+  !libraryBundleSource.includes("node:fs"),
   "platform-neutral library build must not import node:fs",
 );
 assert(
-  !librarySource.includes("node-file-reader"),
+  !libraryBundleSource.includes("node:readline") &&
+    !libraryBundleSource.includes("process.stdin") &&
+    !libraryBundleSource.includes("process.stdout") &&
+    !libraryBundleSource.includes("process.stderr"),
+  "platform-neutral library build must not depend on process streams",
+);
+assert(
+  !libraryBundleSource.includes("node-file-reader"),
   "platform-neutral library build must not include the Node reader",
+);
+assert(
+  !cliSource.includes("setRawMode"),
+  "built CLI must not change terminal raw mode",
+);
+assert(
+  !/process\.exit\(/u.test(cliSource),
+  "built CLI must not terminate with process.exit()",
 );
 
 const publicApi = await import(pathToFileURL(libraryFile).href);
@@ -333,6 +367,19 @@ if (loadedStory.ok) {
 const help = run(["--help"]);
 assert(help.status === 0, "--help must exit 0");
 assert(help.stdout.includes("Usage: bhootos"), "--help must print usage");
+assert(help.stdout.includes("doctor"), "--help must list doctor");
+assert(help.stdout.includes("play"), "--help must list play");
+
+const playHelp = run(["play", "--help"]);
+assert(playHelp.status === 0, "play --help must exit 0");
+assert(
+  playHelp.stdout.includes("<story-file>"),
+  "play --help must show its required story argument",
+);
+assert(
+  playHelp.stdout.includes("Global Options:"),
+  "play --help must show inherited global options",
+);
 
 const version = run(["--version"]);
 assert(version.status === 0, "--version must exit 0");
@@ -364,12 +411,108 @@ for (const args of [["bogus"], ["doctor", "bogus"]]) {
   assert(result.status !== 0, `${args.join(" ")} must reject unsupported arguments`);
 }
 
+const playDirectory = mkdtempSync(join(tmpdir(), "bhootos-play-"));
+try {
+  const storyPath = join(playDirectory, "story.json");
+  const brokenPath = join(playDirectory, "broken.json");
+  const playJson =
+    '{"schemaVersion":1,"id":"private-story-id","title":"Loaded Verify","entryNodeId":"node-alpha","nodes":[{"id":"node-alpha","text":"Choose.","choices":[{"id":"choice-alpha","label":"Open the door","nextNodeId":"node-omega"}]},{"id":"node-omega","text":"Done.","ending":{"id":"ending-private","title":"Escaped"}}]}';
+  writeFileSync(storyPath, playJson, "utf8");
+  writeFileSync(
+    brokenPath,
+    '{"schemaVersion":1,"id":"broken","title":"Broken","entryNodeId":"missing","nodes":[{"id":"other","text":"Done.","ending":{"id":"done","title":"Done"}}]}',
+    "utf8",
+  );
+
+  for (const args of [
+    ["--fast", "--no-color", "--ascii", "play", storyPath],
+    ["play", storyPath, "--fast", "--no-color", "--ascii"],
+  ]) {
+    const played = run(args, {}, "1\n");
+    assert(played.status === 0, `${args.join(" ")} must reach the ending`);
+    assert(played.stdout.includes("Choose."), "play must render narrative");
+    assert(played.stdout.includes("1. Open the door"), "play must render choices");
+    assert(played.stdout.includes("> "), "play must prompt for a choice");
+    assert(played.stdout.includes("Done."), "play must render the ending");
+    assert(played.stdout.includes("Escaped"), "play must render the ending title");
+    assert(
+      !played.stdout.includes("Kaun hai wahan?"),
+      "play must not render the boot screen",
+    );
+    assert(
+      !played.stdout.includes(storyPath),
+      "successful play must not print its source path",
+    );
+    for (const privateId of [
+      "private-story-id",
+      "node-alpha",
+      "choice-alpha",
+      "node-omega",
+      "ending-private",
+    ]) {
+      assert(
+        !played.stdout.includes(privateId),
+        `successful play must not expose ${privateId}`,
+      );
+    }
+    assert(played.stderr === "", "successful play must not write stderr");
+  }
+
+  const missing = run(["play", join(playDirectory, "missing.json")]);
+  assert(missing.status === 2, "a missing story must exit 2");
+  assert(
+    missing.stderr.includes("Story file was not found"),
+    "a missing story must print a concise source-aware error",
+  );
+
+  const broken = run(["play", brokenPath, "--no-color"]);
+  assert(broken.status === 2, "an invalid story must exit 2");
+  assert(
+    broken.stderr.includes("Story document failed validation"),
+    "an invalid story must print a validation summary",
+  );
+  assert(
+    broken.stderr.includes("$.entryNodeId"),
+    "an invalid story must print path-aware diagnostics",
+  );
+  assert(
+    !broken.stderr.includes("\u001b["),
+    "no-color validation errors must contain no ANSI",
+  );
+
+  const eof = run(["play", storyPath, "--fast", "--no-color"], {}, "");
+  assert(eof.status === 4, "EOF during play must exit 4");
+
+  const invalid = run(
+    ["play", storyPath, "--fast", "--no-color"],
+    {},
+    "invalid\ninvalid\ninvalid\n",
+  );
+  assert(invalid.status === 3, "invalid-attempt exhaustion must exit 3");
+  assert(
+    invalid.stderr.includes("Invalid choice attempt limit exhausted"),
+    "invalid-attempt exhaustion must print its final error",
+  );
+} finally {
+  rmSync(playDirectory, { recursive: true, force: true });
+}
+
+for (const args of [
+  ["play"],
+  ["play", "first.json", "second.json"],
+  ["play", "story.json", "--unknown"],
+]) {
+  const result = run(args);
+  assert(result.status !== 0, `${args.join(" ")} must be rejected`);
+}
+
 process.stdout.write("Built CLI and public API verification passed.\n");
 
-function run(args, extraEnv = {}) {
+function run(args, extraEnv = {}, input) {
   const result = spawnSync(process.execPath, [cliFile, ...args], {
     encoding: "utf8",
     env: { ...process.env, ...extraEnv },
+    input,
   });
 
   return {

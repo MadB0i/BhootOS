@@ -36,6 +36,8 @@ const files = packResults[0]?.files?.map(({ path }) => path).sort();
 const expected = [
   "LICENSE",
   "README.md",
+  "dist/chunk-PCOG3XSN.js",
+  "dist/chunk-PCOG3XSN.js.map",
   "dist/cli.js",
   "dist/cli.js.map",
   "dist/index.d.ts",
