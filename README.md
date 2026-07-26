@@ -18,8 +18,9 @@ The current release provides:
 - immutable session snapshots with traversal history
 - choice selection by ID with typed failure outcomes
 - an internal capability-aware terminal presenter for engine views
+- reusable one-line input and numbered-choice selection boundaries
 
-It does not yet include an interactive terminal gameplay loop, input
+It does not yet include an interactive terminal gameplay loop, repeated input
 orchestration, input controls, inventory, saves or the planned **Kaun Hai?**
 episode.
 
@@ -59,8 +60,11 @@ import {
   createStorySession,
   getStoryView,
   parseStoryJson,
+  requestStoryChoice,
+  selectChoiceFromLine,
   transitionStory,
   validateStoryDocument,
+  type LineInput,
   type StoryDocumentV1,
 } from "bhootos";
 ```
@@ -85,8 +89,14 @@ Engine views can be rendered by the internal terminal presentation layer with
 the existing color, Unicode, fast-output, reduced-motion, typewriter, and
 cancellation behavior. It presents narrative, numbered choices, endings, and
 typed transition failures without exposing target node IDs. See
-[`docs/story-presentation.md`](docs/story-presentation.md). Input and gameplay
-orchestration are not implemented.
+[`docs/story-presentation.md`](docs/story-presentation.md).
+
+The public, injectable `LineInput` boundary can request exactly one line, and
+the numbered-choice selector maps canonical 1-based input to the corresponding
+active-view choice ID. Invalid input, EOF, and cancellation remain distinct,
+and no retry or engine transition occurs implicitly. See
+[`docs/choice-input.md`](docs/choice-input.md). Complete gameplay orchestration
+is not implemented.
 
 ## License
 

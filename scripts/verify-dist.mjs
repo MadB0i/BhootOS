@@ -38,8 +38,24 @@ assert(
   "library declarations must contain transitionStory",
 );
 assert(
+  declarationSource.includes("interface LineInput"),
+  "library declarations must contain LineInput",
+);
+assert(
+  declarationSource.includes("selectChoiceFromLine"),
+  "library declarations must contain selectChoiceFromLine",
+);
+assert(
+  declarationSource.includes("requestStoryChoice"),
+  "library declarations must contain requestStoryChoice",
+);
+assert(
   !declarationSource.includes("StoryViewRenderer"),
   "library declarations must not expose terminal presentation internals",
+);
+assert(
+  !declarationSource.includes("NodeLineInput"),
+  "library declarations must not expose the Node line adapter",
 );
 
 const publicApi = await import(pathToFileURL(libraryFile).href);
@@ -50,6 +66,8 @@ assert(
       "getStoryView",
       "parseStoryDocument",
       "parseStoryJson",
+      "requestStoryChoice",
+      "selectChoiceFromLine",
       "transitionStory",
       "validateStoryDocument",
     ]),
@@ -78,6 +96,49 @@ if (parsedStory.ok) {
           activeView.view.choices[0]?.id === "finish" &&
           !("nextNodeId" in activeView.view.choices[0]),
         "active view must expose the choice without its target",
+      );
+
+      const selected = publicApi.selectChoiceFromLine(
+        activeView.view,
+        "1",
+      );
+      assert(
+        selected.ok === true &&
+          selected.choiceId === "finish" &&
+          selected.choiceNumber === 1 &&
+          !("nextNodeId" in selected),
+        "built selectChoiceFromLine must map 1 to the player-safe choice ID",
+      );
+
+      const requested = await publicApi.requestStoryChoice(
+        {
+          readLine: async ({ prompt }) => {
+            assert(prompt === "> ", "built requestStoryChoice must use its default prompt");
+            return { status: "line", value: "1" };
+          },
+        },
+        activeView.view,
+      );
+      assert(
+        requested.status === "selected" &&
+          requested.choiceId === "finish" &&
+          requested.choiceNumber === 1,
+        "built requestStoryChoice must select from an injected line input",
+      );
+
+      const selectedTransition = publicApi.transitionStory(
+        parsedStory.story,
+        created.session,
+        {
+          type: "select-choice",
+          choiceId: selected.ok ? selected.choiceId : "",
+        },
+      );
+      assert(
+        selectedTransition.ok === true &&
+          selectedTransition.session.status === "ended" &&
+          selectedTransition.session.endingId === "done",
+        "built choice selection must transition to the expected ending",
       );
     }
 

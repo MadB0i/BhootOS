@@ -34,3 +34,16 @@ export type {
   StoryViewChoice,
   StoryViewResult,
 } from "./engine/index.js";
+export {
+  requestStoryChoice,
+  selectChoiceFromLine,
+} from "./input/choice-input.js";
+export type {
+  ChoiceInputErrorCode,
+  ChoiceSelectionResult,
+  LineInput,
+  ReadLineOptions,
+  ReadLineResult,
+  RequestStoryChoiceOptions,
+  RequestStoryChoiceResult,
+} from "./input/types.js";

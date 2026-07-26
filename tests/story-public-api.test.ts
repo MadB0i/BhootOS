@@ -10,6 +10,8 @@ describe("public story API", () => {
       "getStoryView",
       "parseStoryDocument",
       "parseStoryJson",
+      "requestStoryChoice",
+      "selectChoiceFromLine",
       "transitionStory",
       "validateStoryDocument",
     ]);
