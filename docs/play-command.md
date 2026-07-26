@@ -66,6 +66,7 @@ unexpected rejections. BhootOS sets `process.exitCode`; it does not call
 
 ## Current limitations
 
-Only explicit local Story Document v1 files are supported. There is no bundled
-full episode, story discovery, remote loading, save/continue, inventory,
-arrow-key navigation, sound, or raw-terminal interface.
+Only explicit local Story Document v1 files are supported. The package includes
+**Kaun Hai?** as a story file, but there is no automatic episode selection,
+story discovery, remote loading, save/continue, inventory, arrow-key
+navigation, sound, or raw-terminal interface.

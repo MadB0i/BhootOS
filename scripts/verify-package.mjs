@@ -43,6 +43,7 @@ const expected = [
   "dist/index.d.ts",
   "dist/index.js",
   "dist/index.js.map",
+  "episodes/kaun-hai/story.json",
   "package.json",
 ];
 

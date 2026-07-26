@@ -1,0 +1,440 @@
+{
+  "schemaVersion": 1,
+  "id": "kaun-hai",
+  "title": "Kaun Hai?",
+  "description": "A late-night repair job, an impossible complaint, and an old temple-office terminal that refuses to close the ticket.",
+  "entryNodeId": "repair-desk",
+  "nodes": [
+    {
+      "id": "repair-desk",
+      "text": "At 2:13 a.m., the monsoon cuts power to the temple trust's administrative office. You were sent to repair its obsolete donation-and-complaint terminal before the morning accounts inspection. The dead UPS clicks once and switches itself on.\n\nBeside it: cold tea, damp receipt paper, and a chair whose cushion is slowly rising as if someone has just stood up. The printer feeds a slip marked COMPLAINT 108/1998 — RESOLVED. A brass service bell rings inside the locked records corridor. A crow taps the window: one, pause, eight.\n\nThe terminal asks, \"Kaun hai wahan?\"",
+      "choices": [
+        {
+          "id": "open-complaint",
+          "label": "Open complaint 108",
+          "nextNodeId": "complaint-108"
+        },
+        {
+          "id": "check-paper-register",
+          "label": "Check the paper register",
+          "nextNodeId": "paper-register"
+        },
+        {
+          "id": "approach-locked-corridor",
+          "label": "Go to the locked corridor",
+          "nextNodeId": "corridor-door"
+        }
+      ]
+    },
+    {
+      "id": "complaint-108",
+      "text": "The complaint was filed on 17 August 1998 by Kamla Joshi, accounts assistant. She wrote that night clerk Devendra Sahu had not abandoned his post. He had found donation receipts entered twice after a flood-relief collection and asked for an inquiry.\n\nThe resolution says EMPLOYEE LEFT WITHOUT NOTICE. The inquiry field is blank. Kamla's signature appears beneath it, too neat to belong to a carbon copy.\n\nThe printer adds a wet line in red: RESOLVED BY WHOM?",
+      "choices": [
+        {
+          "id": "query-closing-officer",
+          "label": "Ask who closed the complaint",
+          "nextNodeId": "terminal-question"
+        },
+        {
+          "id": "find-paper-entry",
+          "label": "Find the paper entry",
+          "nextNodeId": "paper-register"
+        },
+        {
+          "id": "count-crow-taps",
+          "label": "Count the crow's taps",
+          "nextNodeId": "crow-window"
+        }
+      ]
+    },
+    {
+      "id": "paper-register",
+      "text": "The carbon-copy register occupies a steel cupboard labelled CURRENT, which is optimistic by twenty-eight years. Page 108 has been torn out. Pressure marks remain on the sheet below: a date, the word \"corridor,\" and three initials pressed hard enough to score the desk.\n\nRed account thread stitches a cardboard tab over the missing page. Someone wrote CHECK PRESSURE COPY on it. Monsoon water noses under the office door, then stops short of the cupboard.",
+      "choices": [
+        {
+          "id": "shade-carbon",
+          "label": "Shade the carbon impression",
+          "nextNodeId": "carbon-impression"
+        },
+        {
+          "id": "compare-terminal-record",
+          "label": "Compare the terminal record",
+          "nextNodeId": "complaint-108"
+        },
+        {
+          "id": "follow-corridor-bell",
+          "label": "Follow the bell",
+          "nextNodeId": "corridor-door"
+        }
+      ]
+    },
+    {
+      "id": "carbon-impression",
+      "text": "The side of a drawer pencil brings up the old pressure marks.\n\n\"Closure dictated by J.N.B. Original receipt sheet retained in corridor room. Devendra refused revised entry. Kamla did not sign.\"\n\nBelow that, in another hand: \"If this page is removed, the complaint remains open. Status is not an investigation.\"\n\nThe initials match no name on the current staff board. The terminal's UPS relay clicks twice, impatient with your reading speed.",
+      "choices": [
+        {
+          "id": "enter-carbon-statement",
+          "label": "Enter the carbon statement",
+          "nextNodeId": "truth-entry"
+        },
+        {
+          "id": "read-margin-warning",
+          "label": "Read the margin warning",
+          "nextNodeId": "bell-note"
+        },
+        {
+          "id": "take-register-to-terminal",
+          "label": "Take the register to the terminal",
+          "nextNodeId": "terminal-question"
+        }
+      ]
+    },
+    {
+      "id": "terminal-question",
+      "text": "Your query returns three lines:\n\nCLOSING OFFICER: ADMINISTRATOR\nACCOUNT: NOT FOUND\nAUTHORITY: CONTINUING\n\nThe cursor drops to a field labelled NIGHT CLERK NAME. Behind you, the recently occupied chair gives a small wooden complaint. The terminal does not repeat its question. It waits with the confidence of an office form that knows somebody, eventually, will fill the wrong box.",
+      "choices": [
+        {
+          "id": "enter-own-name",
+          "label": "Enter your own name",
+          "nextNodeId": "operator-form"
+        },
+        {
+          "id": "ask-about-devendra",
+          "label": "Ask about Devendra Sahu",
+          "nextNodeId": "truth-entry"
+        },
+        {
+          "id": "return-to-register",
+          "label": "Return to the paper register",
+          "nextNodeId": "paper-register"
+        }
+      ]
+    },
+    {
+      "id": "operator-form",
+      "text": "The terminal accepts your name and quietly changes the date to 18 August 1998. ROLE is already filled: NIGHT CLERK.\n\nA note taped beneath the keyboard says, \"If complaint 108 wakes, sign the night-clerk field. Do not answer the fourth bell. — S. Rao.\"\n\nThe laminated staff roster lists S. Rao's service as ended in 2003. Someone later added, in careful blue ink, \"died during night duty.\" The chair behind you settles another centimetre.",
+      "choices": [
+        {
+          "id": "sign-night-clerk-field",
+          "label": "Sign the Night Clerk field",
+          "nextNodeId": "clerk-appointment"
+        },
+        {
+          "id": "change-role-to-witness",
+          "label": "Change the role to witness",
+          "nextNodeId": "truth-entry"
+        },
+        {
+          "id": "clear-form-with-override",
+          "label": "Clear the form with override",
+          "nextNodeId": "override-console"
+        }
+      ]
+    },
+    {
+      "id": "crow-window",
+      "text": "The crow is soaked but composed. It taps one beat, then none, then eight. When you lean closer, it repeats the pattern against a pane painted shut before you were born.\n\nOn the sill inside lies a curl of damp receipt paper. Each tap makes the printer advance by exactly one line. The paper has wrapped itself around the cold tea glass, preserving a message on its dry inner face.",
+      "choices": [
+        {
+          "id": "count-pattern-carefully",
+          "label": "Count the pattern carefully",
+          "nextNodeId": "tap-pattern"
+        },
+        {
+          "id": "return-to-complaint",
+          "label": "Open complaint 108",
+          "nextNodeId": "complaint-108"
+        },
+        {
+          "id": "try-corridor-latch",
+          "label": "Try the corridor latch",
+          "nextNodeId": "corridor-door"
+        }
+      ]
+    },
+    {
+      "id": "tap-pattern",
+      "text": "The rhythm is 1-0-8, not a bird asking to be let in. Unrolling the receipt paper reveals S. Rao's handwriting: \"The system only needs a responsible night clerk. Give it a name and the ticket sleeps. Never open the corridor after three bells.\"\n\nA second sentence has bled through from the reverse: \"Rao followed this procedure. Rao never went home.\"\n\nOutside, the crow waits for you to notice the contradiction.",
+      "choices": [
+        {
+          "id": "count-taps-again",
+          "label": "Count the taps again",
+          "nextNodeId": "crow-window"
+        },
+        {
+          "id": "test-rao-instruction",
+          "label": "Test Rao's instruction",
+          "nextNodeId": "operator-form"
+        },
+        {
+          "id": "doubt-note-check-corridor",
+          "label": "Doubt the note and check the corridor",
+          "nextNodeId": "corridor-door"
+        }
+      ]
+    },
+    {
+      "id": "corridor-door",
+      "text": "The records corridor is locked with a chain on the office side. This should make it reassuring. It does not.\n\nA brass service bell hangs beside the frame, the kind once used to call the night clerk from the ledger room. It is not part of the shrine. Its cord disappears through the wall toward the old records room.\n\nMonsoon water gathers at the threshold without crossing it. From beyond the door comes the scrape of a chair being drawn up to a desk.",
+      "choices": [
+        {
+          "id": "read-frame-note",
+          "label": "Read the note on the frame",
+          "nextNodeId": "bell-note"
+        },
+        {
+          "id": "check-register-instead",
+          "label": "Check the paper register",
+          "nextNodeId": "paper-register"
+        },
+        {
+          "id": "request-corridor-key",
+          "label": "Ask the terminal for the key",
+          "nextNodeId": "terminal-question"
+        }
+      ]
+    },
+    {
+      "id": "bell-note",
+      "text": "Two instructions share the doorframe.\n\nThe older one, pencilled beneath the paint, reads: \"Three calls bring a witness. The fourth enters the statement.\"\n\nA newer notice, stamped by ADMINISTRATION, covers half of it: \"After the third bell, do not open. Enter the current clerk's name and mark resolved.\"\n\nThe newer notice carries J.N.B. in the approval box. Its ink has not faded. A loose wooden panel sits below the bell cord.",
+      "choices": [
+        {
+          "id": "ring-three-times",
+          "label": "Ring the bell three times",
+          "nextNodeId": "after-third-bell"
+        },
+        {
+          "id": "press-loose-panel",
+          "label": "Press the loose frame panel",
+          "nextNodeId": "record-room"
+        },
+        {
+          "id": "follow-rao-procedure",
+          "label": "Follow Rao's instruction",
+          "nextNodeId": "operator-form"
+        }
+      ]
+    },
+    {
+      "id": "after-third-bell",
+      "text": "The first ring is ordinary brass. The second comes back from farther down the corridor. At the third, the chain drops without being touched.\n\nIn the office, the printer writes WITNESS PRESENT. The crow stops tapping. The corridor door opens a finger's width, releasing the smell of wet paper and the precise click of a UPS relay from 1998.\n\nThe bell cord remains in your hand. The pencilled instruction promised that a fourth ring would enter the statement. It never said whose.",
+      "choices": [
+        {
+          "id": "ring-fourth-time",
+          "label": "Ring it a fourth time",
+          "nextNodeId": "ending-fourth-bell"
+        },
+        {
+          "id": "open-corridor-door",
+          "label": "Open the corridor door",
+          "nextNodeId": "record-room"
+        },
+        {
+          "id": "retreat-to-complaint",
+          "label": "Return to complaint 108",
+          "nextNodeId": "complaint-108"
+        }
+      ]
+    },
+    {
+      "id": "record-room",
+      "text": "The latch is free. Inside, donation ledgers sit above the flood line on brick supports. The original sheet for complaint 108 is pinned beneath an administrator's rubber stamp.\n\nDevendra's note says the relief receipts were backdated and entered twice. He refused to replace the originals. Kamla requested an inquiry after he vanished during the next night shift. Her request was closed with a copied signature.\n\nNothing here accuses the temple or its worshippers. The theft belonged to an office, and the office had filed itself as innocent.",
+      "choices": [
+        {
+          "id": "transcribe-original-statement",
+          "label": "Transcribe the original statement",
+          "nextNodeId": "truth-entry"
+        },
+        {
+          "id": "use-administrator-stamp",
+          "label": "Use the administrator stamp",
+          "nextNodeId": "override-console"
+        },
+        {
+          "id": "leave-papers-question-terminal",
+          "label": "Question the terminal",
+          "nextNodeId": "terminal-question"
+        }
+      ]
+    },
+    {
+      "id": "truth-entry",
+      "text": "The terminal assembles its audit trail beside the surviving paper record. Devendra reported altered donation receipts. Kamla demanded an inquiry. The closing note was dictated under the initials J.N.B.; her signature was copied; no investigator was assigned.\n\nA final field appears:\n\nREASON FOR REOPENING:\n\nThe cursor waits. Somewhere beyond the corridor, a man turns one page of a ledger and stops.",
+      "choices": [
+        {
+          "id": "record-falsified-closure",
+          "label": "Record the closure as falsified",
+          "nextNodeId": "audit-comparison"
+        },
+        {
+          "id": "name-yourself-night-clerk",
+          "label": "Put your name in the Night Clerk field",
+          "nextNodeId": "clerk-appointment"
+        },
+        {
+          "id": "delete-complaint",
+          "label": "Delete the complaint record",
+          "nextNodeId": "override-console"
+        }
+      ]
+    },
+    {
+      "id": "audit-comparison",
+      "text": "The terminal places the complaint scan beside its audit log. The resolution was entered at 2:13 a.m., eleven minutes after Devendra's last receipt correction. Kamla's staff account was not used. An administrator command supplied a picture of her signature taken from a salary acknowledgement.\n\nThe initials J.N.B. appear only in the paper impression. They are evidence of an instruction, not proof of who typed it. The terminal asks which claim the records can support.",
+      "choices": [
+        {
+          "id": "compare-audit-times",
+          "label": "Compare the audit timestamps",
+          "nextNodeId": "signature-check"
+        },
+        {
+          "id": "accuse-initials-as-proof",
+          "label": "Name J.N.B. as the culprit",
+          "nextNodeId": "override-console"
+        },
+        {
+          "id": "accept-clerical-responsibility",
+          "label": "Accept clerical responsibility",
+          "nextNodeId": "clerk-appointment"
+        }
+      ]
+    },
+    {
+      "id": "signature-check",
+      "text": "The timestamps settle into an ugly sequence: corrected receipts, Devendra's objection, Kamla's inquiry, copied signature, closure. No investigation appears between them.\n\nOn paper, the copied signature is almost perfect. It repeats a broken loop in Kamla's name that appears on the salary form but nowhere in her handwritten complaint. The printer produces both samples on one damp strip and leaves a box for your finding.",
+      "choices": [
+        {
+          "id": "mark-signature-copied",
+          "label": "Mark the signature as copied",
+          "nextNodeId": "witness-declaration"
+        },
+        {
+          "id": "trust-stamped-resolution",
+          "label": "Trust the stamped resolution",
+          "nextNodeId": "override-console"
+        },
+        {
+          "id": "take-night-clerk-role",
+          "label": "Take the Night Clerk role",
+          "nextNodeId": "clerk-appointment"
+        }
+      ]
+    },
+    {
+      "id": "witness-declaration",
+      "text": "The terminal accepts the finding, then asks a narrower question:\n\nDID YOU WITNESS THE EVENTS OF 18 AUGUST 1998?\n\nThe chair waits behind you. The corridor offers no helpful sound. You did not see Devendra object or Kamla file her complaint. You have seen the original paper, the copied signature, and the audit trail tonight.\n\nThe distinction feels small enough for an office to ignore and large enough for the dead to keep.",
+      "choices": [
+        {
+          "id": "state-records-only",
+          "label": "State only what the records prove",
+          "nextNodeId": "disposition-menu"
+        },
+        {
+          "id": "claim-personal-knowledge",
+          "label": "Claim personal knowledge of 1998",
+          "nextNodeId": "override-console"
+        },
+        {
+          "id": "sign-responsible-clerk",
+          "label": "Sign as the responsible clerk",
+          "nextNodeId": "clerk-appointment"
+        }
+      ]
+    },
+    {
+      "id": "disposition-menu",
+      "text": "The red word RESOLVED peels away from the screen. In its place: PENDING WITNESS STATEMENT.\n\nThe terminal asks whether you personally saw the 1998 events. The honest answer is no. It asks whether the closure record was falsified. The paper and audit trail agree that it was.\n\nThree signature fields open. One says WITNESS TO RECORDS. One says NIGHT CLERK. The last says ADMINISTRATOR OVERRIDE and is already signed UNKNOWN.",
+      "choices": [
+        {
+          "id": "sign-as-records-witness",
+          "label": "Sign as witness to the records",
+          "nextNodeId": "ending-complaint-closed"
+        },
+        {
+          "id": "sign-as-replacement-clerk",
+          "label": "Sign as replacement night clerk",
+          "nextNodeId": "clerk-appointment"
+        },
+        {
+          "id": "select-administrator-override",
+          "label": "Select administrator override",
+          "nextNodeId": "override-console"
+        }
+      ]
+    },
+    {
+      "id": "clerk-appointment",
+      "text": "The terminal stamps your name into the NIGHT CLERK field and backdates the appointment to 18 August 1998.\n\nDUTY STATUS: PENDING ARRIVAL\n\nThe office telephone rings once. Its cable ends in a bare copper knot under the desk. A fresh cup of tea appears beside the old one, equally cold. The chair is now pulled out for you.\n\nAt the bottom of the form, PAY REVISION is marked PENDING. Some administrative traditions survive every management committee.",
+      "choices": [
+        {
+          "id": "accept-appointment",
+          "label": "Accept the appointment",
+          "nextNodeId": "ending-permanent-shift"
+        },
+        {
+          "id": "correct-role-to-witness",
+          "label": "Correct the role to witness",
+          "nextNodeId": "truth-entry"
+        },
+        {
+          "id": "force-system-logout",
+          "label": "Force a system logout",
+          "nextNodeId": "override-console"
+        }
+      ]
+    },
+    {
+      "id": "override-console",
+      "text": "The maintenance override offers two commands: ERASE COMPLAINT and FORCE RESOLUTION. Both require administrator authority.\n\nBefore you touch the keyboard, the authority field fills itself: UNKNOWN. The terminal is not asking you to become administrator. It is asking you to confirm that somebody already is.\n\nThe UPS relay begins clicking in the crow's 1-0-8 rhythm. The locked office door unlatches, but the corridor door opens wider.",
+      "choices": [
+        {
+          "id": "execute-override",
+          "label": "Execute the administrator override",
+          "nextNodeId": "ending-unknown-administrator"
+        },
+        {
+          "id": "cancel-enter-witness-statement",
+          "label": "Cancel and enter a witness statement",
+          "nextNodeId": "truth-entry"
+        },
+        {
+          "id": "request-bell-authorization",
+          "label": "Request bell authorization",
+          "nextNodeId": "bell-note"
+        }
+      ]
+    },
+    {
+      "id": "ending-complaint-closed",
+      "text": "You state only what the surviving records prove: the closure was falsified, Kamla's signature was copied, and Devendra's report was never investigated.\n\nThe terminal prints a dry receipt.\n\nCOMPLAINT 108/1998\nSTATUS: CLOSED AFTER INQUIRY ORDERED\n\nThe brass bell rings once. The chair behind you is empty and plainly old. At dawn, the inspector finds the original sheet waiting on the desk. She reads it twice, then asks for the current trustees and a fresh register.\n\nThe UPS switches off. This time, it stays off.",
+      "ending": {
+        "id": "complaint-closed",
+        "title": "Complaint Closed"
+      }
+    },
+    {
+      "id": "ending-permanent-shift",
+      "text": "You accept. The office clock keeps 2:13 and the rain holds its place on the window.\n\nThe terminal closes complaint 108 under RESPONSIBLE CLERK APPOINTED. It opens complaint 109. Then 110. The chair fits better after the third file.\n\nAt nine in the morning, the inspector asks the trust secretary why the repair technician never arrived. Inside the locked office, your attendance sheet marks you present for a night shift that began in 1998.\n\nThe salary column remains pending.",
+      "ending": {
+        "id": "permanent-night-shift",
+        "title": "Permanent Night Shift"
+      }
+    },
+    {
+      "id": "ending-unknown-administrator",
+      "text": "You confirm the override. Complaint 108 closes at once. So do every open complaint on the terminal, including tomorrow's.\n\nLOGIN ACCEPTED: ADMINISTRATOR UNKNOWN\n\nThe keyboard stops responding to you. Forms continue opening, approving themselves with Kamla's copied signature. The printer produces a staff card bearing your photograph, no name, and an authorization level higher than the trust has ever issued.\n\nBehind you, the corridor chair turns to face the office. No one is sitting in it.",
+      "ending": {
+        "id": "unknown-administrator",
+        "title": "Unknown Administrator"
+      }
+    },
+    {
+      "id": "ending-fourth-bell",
+      "text": "You ring the fourth bell.\n\nThe office answers from 1998. Rain climbs from the floor to the ceiling. The terminal prints Kamla's missing complaint in your handwriting, including a final sentence you have not yet written: \"The witness entered willingly.\"\n\nThe corridor door opens onto the same office, with newer paint and older calendars. At both desks, the chairs are occupied just beyond the angle of sight.\n\nOutside the window, the crow taps once and waits for the zero.",
+      "ending": {
+        "id": "fourth-bell",
+        "title": "The Fourth Bell"
+      }
+    }
+  ]
+}

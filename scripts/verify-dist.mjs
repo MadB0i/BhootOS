@@ -13,6 +13,12 @@ const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.me
 const cliPath = new URL("../dist/cli.js", import.meta.url);
 const cliFile = fileURLToPath(cliPath);
 const cliSource = readFileSync(cliPath, "utf8");
+const bundledEpisodePath = fileURLToPath(
+  new URL("../episodes/kaun-hai/story.json", import.meta.url),
+);
+const bundledEpisode = JSON.parse(
+  readFileSync(bundledEpisodePath, "utf8"),
+);
 const libraryFile = fileURLToPath(new URL("../dist/index.js", import.meta.url));
 const librarySource = readFileSync(libraryFile, "utf8");
 const libraryDependencySources = [
@@ -506,6 +512,63 @@ for (const args of [
   assert(result.status !== 0, `${args.join(" ")} must be rejected`);
 }
 
+const bundledPlay = run(
+  [
+    "play",
+    bundledEpisodePath,
+    "--fast",
+    "--no-color",
+    "--ascii",
+  ],
+  {},
+  "1\n2\n1\n1\n1\n1\n1\n1\n1\n",
+);
+assert(bundledPlay.status === 0, "bundled Kaun Hai? route must exit 0");
+assert(
+  bundledPlay.stdout.includes("COMPLAINT 108/1998") &&
+    bundledPlay.stdout.includes("Kaun hai wahan?"),
+  "bundled episode must render its opening content",
+);
+assert(
+  occurrenceCount(bundledPlay.stdout, "Complaint Closed") === 1,
+  "bundled episode must render its ending title exactly once",
+);
+assert(
+  !bundledPlay.stdout.includes("BHOOT/OS") &&
+    !bundledPlay.stdout.includes("Human processes detected"),
+  "bundled episode must not render the boot diagnostic screen",
+);
+assert(
+  !bundledPlay.stdout.includes(bundledEpisodePath),
+  "bundled episode must not print its file path on success",
+);
+const bundledInternalIds = new Set([
+  bundledEpisode.id,
+  bundledEpisode.entryNodeId,
+  ...bundledEpisode.nodes.flatMap((node) => [
+    node.id,
+    ...(node.ending === undefined ? [] : [node.ending.id]),
+    ...(node.choices ?? []).flatMap((choice) => [
+      choice.id,
+      choice.nextNodeId,
+    ]),
+  ]),
+]);
+for (const internalId of bundledInternalIds) {
+  assert(
+    !bundledPlay.stdout.includes(internalId),
+    `bundled episode must not expose internal ID ${internalId}`,
+  );
+}
+assert(
+  !bundledPlay.stdout.includes("\u001b["),
+  "bundled no-color play must contain no ANSI",
+);
+assert(
+  bundledPlay.stderr === "",
+  "successful bundled episode play must not write stderr",
+);
+
 process.stdout.write("Built CLI and public API verification passed.\n");
 
 function run(args, extraEnv = {}, input) {
@@ -526,4 +589,8 @@ function assert(condition, message) {
   if (!condition) {
     throw new Error(message);
   }
+}
+
+function occurrenceCount(text, value) {
+  return text.split(value).length - 1;
 }

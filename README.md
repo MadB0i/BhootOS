@@ -22,9 +22,10 @@ The current release provides:
 - an injected, deterministic in-memory gameplay orchestrator
 - validated story loading through an injected text-reader boundary
 - an explicit-file `play` command composing loading and terminal gameplay
+- the first bundled episode, **Kaun Hai?**
 
 It does not include story discovery, raw input controls, inventory, saves or
-the planned **Kaun Hai?** episode.
+conditional effects.
 
 ## Requirements
 
@@ -60,6 +61,19 @@ exactly one explicit Story Document v1 JSON path. See
 [`docs/play-command.md`](docs/play-command.md) for output and exit-code
 semantics.
 
+## Play the bundled episode from the repository
+
+```bash
+pnpm build
+node dist/cli.js play ./episodes/kaun-hai/story.json
+```
+
+**Kaun Hai?** follows a late-night repair call in an old temple trust office,
+where a complaint closed in 1998 begins asking for a truthful witness. It is
+BhootOS's first bundled episode, but `play` still requires its explicit file
+path; automatic episode selection is not implemented. Saves, inventory,
+conditions, effects, and arrow-key menus are also not implemented.
+
 ## Story Document API
 
 ```ts
@@ -93,7 +107,8 @@ invalid commands return typed failures. See
 [`docs/engine-api.md`](docs/engine-api.md) for the complete API and transition
 semantics.
 
-This release has no built-in episode.
+The public library remains episode-agnostic; bundled content is not exported
+through the package root.
 
 Engine views can be rendered by the internal terminal presentation layer with
 the existing color, Unicode, fast-output, reduced-motion, typewriter, and

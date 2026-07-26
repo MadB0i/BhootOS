@@ -17,6 +17,7 @@
   },
   "files": [
     "dist",
+    "episodes",
     "README.md",
     "LICENSE"
   ],
