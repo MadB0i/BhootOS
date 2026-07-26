@@ -7,6 +7,7 @@ import {
   DEFAULT_CHARACTER_DELAY_MS,
   DEFAULT_PUNCTUATION_DELAY_MS,
 } from "./typewriter.js";
+import { formatChoice, formatNarrative } from "./layout.js";
 
 export interface StoryViewRenderOptions {
   readonly animateText?: boolean;
@@ -53,7 +54,13 @@ export class StoryViewRenderer {
       await this.renderNarrative(activeView.text, options);
       this.renderer.writeLine();
       for (const [index, choice] of activeView.choices.entries()) {
-        this.renderer.writeLine(`  ${String(index + 1)}. ${choice.label}`);
+        for (const line of formatChoice(
+          index + 1,
+          choice.label,
+          this.renderer.getContentWidth(),
+        )) {
+          this.renderer.writeLine(line);
+        }
       }
       return;
     }
@@ -85,12 +92,15 @@ export class StoryViewRenderer {
     text: string,
     options: StoryViewRenderOptions,
   ): Promise<void> {
-    await this.renderer.typewriteLine(text, {
+    await this.renderer.typewriteLine(
+      formatNarrative(text, this.renderer.getContentWidth()),
+      {
       enabled: options.animateText ?? true,
       characterDelayMs: DEFAULT_CHARACTER_DELAY_MS,
       punctuationDelayMs: DEFAULT_PUNCTUATION_DELAY_MS,
       ...(options.signal === undefined ? {} : { signal: options.signal }),
-    });
+      },
+    );
   }
 }
 

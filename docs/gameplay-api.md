@@ -1,11 +1,9 @@
 # In-memory gameplay API
 
 `runStory` is a CLI-independent orchestrator for playing a complete Story
-Document v1 through injected presentation and choice-request dependencies. It
+Document v1 or v2 through injected presentation and choice-request dependencies. It
 uses the deterministic engine internally and performs no filesystem, process,
 environment, stream, timing, or terminal access.
-
-There is no `bhootos play` command yet.
 
 ## Dependencies
 
@@ -73,6 +71,9 @@ const result = await runStory(story, dependencies, {
   animateText: false,
   choicePrompt: "> ",
   maxInvalidAttempts: 3,
+  onTransition: async (session) => {
+    await saveSession(session);
+  },
 });
 
 if (result.status === "ended") {
@@ -107,10 +108,16 @@ For each arrived view, the orchestrator:
 4. requests one numbered choice from an active view;
 5. handles invalid input, EOF, or cancellation;
 6. applies a selected choice through `transitionStory`; and
-7. continues with the transition's returned session and view.
+7. awaits the optional `onTransition` persistence hook; and
+8. continues with the transition's returned session and view.
 
 Using the transition's view prevents an ending from being rendered twice.
 There is no hidden limit on successful transitions.
+
+`onTransition` runs after the engine has produced the new immutable session and
+before the next view is rendered. It is called for active and ending
+transitions. A rejection returns `persistence-failed` with that new session;
+the gameplay loop does not continue or pretend the save succeeded.
 
 ## Invalid input
 
@@ -162,8 +169,8 @@ therefore cannot produce EOF.
 
 Stable failure codes are `invalid-options`, `session-creation-failed`,
 `session-invalid`, `view-failed`, `transition-failed`,
-`presentation-failed`, and `input-failed`. Typed engine failures preserve their
-original message and expose the original engine code.
+and `persistence-failed`. Typed engine failures preserve their original message
+and expose the original engine code.
 
 Unexpected renderer, requester, input-error renderer, transition-error
 renderer, or engine exceptions propagate unchanged. They are not converted to
@@ -178,5 +185,5 @@ transition ceiling; termination depends on the story, scripted input, EOF,
 cancellation, or the invalid-attempt limit.
 
 This API makes in-memory stories playable by library embedders with injected
-dependencies. It does not load story files, install a default terminal input
-adapter, or add a CLI `play` command.
+dependencies. It does not load story files or install a default terminal input
+adapter. The CLI composes those separately.

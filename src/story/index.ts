@@ -1,8 +1,20 @@
 export type {
+  StoryChoice,
   StoryChoiceV1,
+  StoryChoiceV2,
+  StoryConditionV2,
+  StoryDocument,
   StoryDocumentV1,
+  StoryDocumentV2,
+  StoryEffectV2,
+  StoryEnding,
   StoryEndingV1,
+  StoryEndingV2,
+  StoryFlagValue,
+  StoryInitialStateV2,
+  StoryNode,
   StoryNodeV1,
+  StoryNodeV2,
 } from "./types.js";
 export type {
   StoryDiagnostic,

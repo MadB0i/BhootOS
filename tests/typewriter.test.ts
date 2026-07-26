@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { CancellationError } from "../src/terminal/scheduler.js";
 import { Typewriter } from "../src/terminal/typewriter.js";
+import { AnimationSkipRequest } from "../src/input/animation-skipper.js";
 
 describe("Typewriter", () => {
   function fakeScheduler() {
@@ -13,6 +14,54 @@ describe("Typewriter", () => {
       }),
     };
   }
+
+  it("reveals the remaining text immediately when animation is skipped", async () => {
+    const write = vi.fn();
+    const skip = new AbortController();
+    const scheduler = {
+      sleep: vi.fn(
+        (_milliseconds: number, signal?: AbortSignal) =>
+          new Promise<void>((_resolve, reject) => {
+            if (signal?.aborted === true) {
+              reject(new CancellationError());
+              return;
+            }
+            signal?.addEventListener(
+              "abort",
+              () => reject(new CancellationError()),
+              { once: true },
+            );
+          }),
+      ),
+    };
+    const typewriter = new Typewriter({ write, scheduler });
+
+    const running = typewriter.typewrite("abcdef", {
+      characterDelayMs: 10,
+      skipSignal: skip.signal,
+    });
+    expect(write).toHaveBeenCalledWith("a");
+    skip.abort(new AnimationSkipRequest());
+    await running;
+
+    expect(write.mock.calls.map((call) => String(call[0])).join("")).toBe(
+      "abcdef",
+    );
+    expect(scheduler.sleep).toHaveBeenCalledTimes(1);
+  });
+
+  it("propagates animation input failures instead of treating them as skips", async () => {
+    const skip = new AbortController();
+    skip.abort(new Error("input failed"));
+    const typewriter = new Typewriter({
+      write: vi.fn(),
+      scheduler: fakeScheduler(),
+    });
+
+    await expect(
+      typewriter.typewrite("abc", { skipSignal: skip.signal }),
+    ).rejects.toThrow("input failed");
+  });
 
   it("disabled mode writes once with zero sleeps", async () => {
     const write = vi.fn();
@@ -49,7 +98,7 @@ describe("Typewriter", () => {
       characterDelayMs: 1,
     });
 
-    const output = write.mock.calls.map(([text]: [string]) => text).join("");
+    const output = write.mock.calls.map((call) => String(call[0])).join("");
     expect(output).toBe("Hello, World!");
   });
 
@@ -104,7 +153,7 @@ describe("Typewriter", () => {
     expect(write).toHaveBeenCalledTimes(2);
     expect(write).toHaveBeenNthCalledWith(1, "👋");
     expect(write).toHaveBeenNthCalledWith(2, "🌍");
-    expect(write.mock.calls.map(([text]: [string]) => text).join("")).toBe(emoji);
+    expect(write.mock.calls.map((call) => String(call[0])).join("")).toBe(emoji);
   });
 
   it("accepts zero delays", async () => {
@@ -176,7 +225,7 @@ describe("Typewriter", () => {
       }),
     ).rejects.toThrow(CancellationError);
 
-    expect(write.mock.calls.map(([text]: [string]) => text)).toEqual(["a"]);
+    expect(write.mock.calls.map((call) => String(call[0]))).toEqual(["a"]);
   });
 
   it("propagates unrelated scheduler errors", async () => {

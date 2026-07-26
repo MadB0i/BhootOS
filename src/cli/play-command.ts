@@ -2,7 +2,8 @@ import type {
   LoadStoryOptions,
   LoadStoryResult,
 } from "../story/loader-types.js";
-import type { StoryDocumentV1 } from "../story/types.js";
+import type { StoryDocument } from "../story/types.js";
+import type { StorySession } from "../engine/types.js";
 import type { RunStoryResult } from "../gameplay/types.js";
 
 export const PLAY_EXIT_CODES = Object.freeze({
@@ -16,6 +17,8 @@ export const PLAY_EXIT_CODES = Object.freeze({
 
 export interface PlayGameplayOptions {
   readonly signal?: AbortSignal;
+  readonly initialSession?: StorySession;
+  readonly onTransition?: (session: StorySession) => void | Promise<void>;
 }
 
 export interface PlayCommandDependencies {
@@ -24,7 +27,7 @@ export interface PlayCommandDependencies {
     options?: LoadStoryOptions,
   ) => Promise<LoadStoryResult>;
   readonly runGameplay: (
-    story: StoryDocumentV1,
+    story: StoryDocument,
     options?: PlayGameplayOptions,
   ) => Promise<RunStoryResult>;
   readonly writeError: (text: string) => void;
@@ -32,11 +35,15 @@ export interface PlayCommandDependencies {
 
 export interface PlayCommandOptions {
   readonly signal?: AbortSignal;
+  readonly bundledEpisode?: boolean;
+  readonly initialSession?: StorySession;
+  readonly onTransition?: (session: StorySession) => void | Promise<void>;
 }
 
 function formatLoadFailure(
   sourceName: string,
   result: Exclude<LoadStoryResult, { readonly ok: true }>,
+  bundledEpisode: boolean,
 ): string {
   const baseMessage = result.message.replace(/\.$/, "");
   const message =
@@ -50,7 +57,12 @@ function formatLoadFailure(
     )
     .join("\n");
 
-  return `bhootos: ${message}\n${diagnostics.length > 0 ? `${diagnostics}\n` : ""}`;
+  const primary =
+    bundledEpisode && result.stage === "read"
+      ? `Bundled episode installation could not be read: ${message}`
+      : message;
+
+  return `bhootos: ${primary}\n${diagnostics.length > 0 ? `${diagnostics}\n` : ""}`;
 }
 
 export async function executePlayCommand(
@@ -68,13 +80,27 @@ export async function executePlayCommand(
       return PLAY_EXIT_CODES.cancelled;
     }
 
-    dependencies.writeError(formatLoadFailure(sourceName, loadResult));
+    dependencies.writeError(
+      formatLoadFailure(
+        sourceName,
+        loadResult,
+        options.bundledEpisode === true,
+      ),
+    );
     return PLAY_EXIT_CODES.loadFailure;
   }
 
   const gameplayResult = await dependencies.runGameplay(
     loadResult.story,
-    options.signal === undefined ? {} : { signal: options.signal },
+    {
+      ...(options.signal === undefined ? {} : { signal: options.signal }),
+      ...(options.initialSession === undefined
+        ? {}
+        : { initialSession: options.initialSession }),
+      ...(options.onTransition === undefined
+        ? {}
+        : { onTransition: options.onTransition }),
+    },
   );
 
   switch (gameplayResult.status) {

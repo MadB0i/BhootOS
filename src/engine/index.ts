@@ -6,6 +6,7 @@ export type {
   SelectChoiceCommand,
   StoryEngineFailure,
   StoryHistoryEntry,
+  StoryRuntimeState,
   StorySession,
   StorySessionCreationResult,
   StorySessionStatus,

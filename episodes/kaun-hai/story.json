@@ -1,9 +1,18 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "kaun-hai",
   "title": "Kaun Hai?",
   "description": "A late-night repair job, an impossible complaint, and an old temple-office terminal that refuses to close the ticket.",
   "entryNodeId": "repair-desk",
+  "initialState": {
+    "flags": {
+      "carbon-statement-entered": false,
+      "closure-recorded": false,
+      "complaint-opened": false,
+      "signature-copied": false
+    },
+    "inventory": []
+  },
   "nodes": [
     {
       "id": "repair-desk",
@@ -12,7 +21,14 @@
         {
           "id": "open-complaint",
           "label": "Open complaint 108",
-          "nextNodeId": "complaint-108"
+          "nextNodeId": "complaint-108",
+          "effects": [
+            {
+              "type": "set-flag",
+              "flag": "complaint-opened",
+              "value": true
+            }
+          ]
         },
         {
           "id": "check-paper-register",
@@ -54,7 +70,13 @@
         {
           "id": "shade-carbon",
           "label": "Shade the carbon impression",
-          "nextNodeId": "carbon-impression"
+          "nextNodeId": "carbon-impression",
+          "effects": [
+            {
+              "type": "add-item",
+              "item": "carbon-copy"
+            }
+          ]
         },
         {
           "id": "compare-terminal-record",
@@ -75,7 +97,18 @@
         {
           "id": "enter-carbon-statement",
           "label": "Enter the carbon statement",
-          "nextNodeId": "truth-entry"
+          "nextNodeId": "truth-entry",
+          "requires": {
+            "type": "has-item",
+            "item": "carbon-copy"
+          },
+          "effects": [
+            {
+              "type": "set-flag",
+              "flag": "carbon-statement-entered",
+              "value": true
+            }
+          ]
         },
         {
           "id": "read-margin-warning",
@@ -243,7 +276,18 @@
         {
           "id": "transcribe-original-statement",
           "label": "Transcribe the original statement",
-          "nextNodeId": "truth-entry"
+          "nextNodeId": "truth-entry",
+          "effects": [
+            {
+              "type": "set-flag",
+              "flag": "carbon-statement-entered",
+              "value": true
+            },
+            {
+              "type": "add-item",
+              "item": "carbon-copy"
+            }
+          ]
         },
         {
           "id": "use-administrator-stamp",
@@ -264,7 +308,19 @@
         {
           "id": "record-falsified-closure",
           "label": "Record the closure as falsified",
-          "nextNodeId": "audit-comparison"
+          "nextNodeId": "audit-comparison",
+          "requires": {
+            "type": "flag-equals",
+            "flag": "carbon-statement-entered",
+            "value": true
+          },
+          "effects": [
+            {
+              "type": "set-flag",
+              "flag": "closure-recorded",
+              "value": true
+            }
+          ]
         },
         {
           "id": "name-yourself-night-clerk",
@@ -306,7 +362,14 @@
         {
           "id": "mark-signature-copied",
           "label": "Mark the signature as copied",
-          "nextNodeId": "witness-declaration"
+          "nextNodeId": "witness-declaration",
+          "effects": [
+            {
+              "type": "set-flag",
+              "flag": "signature-copied",
+              "value": true
+            }
+          ]
         },
         {
           "id": "trust-stamped-resolution",
@@ -348,7 +411,26 @@
         {
           "id": "sign-as-records-witness",
           "label": "Sign as witness to the records",
-          "nextNodeId": "ending-complaint-closed"
+          "nextNodeId": "ending-complaint-closed",
+          "requires": {
+            "type": "all",
+            "conditions": [
+              {
+                "type": "flag-equals",
+                "flag": "closure-recorded",
+                "value": true
+              },
+              {
+                "type": "flag-equals",
+                "flag": "signature-copied",
+                "value": true
+              },
+              {
+                "type": "has-item",
+                "item": "carbon-copy"
+              }
+            ]
+          }
         },
         {
           "id": "sign-as-replacement-clerk",
@@ -409,7 +491,26 @@
       "text": "You state only what the surviving records prove: the closure was falsified, Kamla's signature was copied, and Devendra's report was never investigated.\n\nThe terminal prints a dry receipt.\n\nCOMPLAINT 108/1998\nSTATUS: CLOSED AFTER INQUIRY ORDERED\n\nThe brass bell rings once. The chair behind you is empty and plainly old. At dawn, the inspector finds the original sheet waiting on the desk. She reads it twice, then asks for the current trustees and a fresh register.\n\nThe UPS switches off. This time, it stays off.",
       "ending": {
         "id": "complaint-closed",
-        "title": "Complaint Closed"
+        "title": "Complaint Closed",
+        "requires": {
+          "type": "all",
+          "conditions": [
+            {
+              "type": "flag-equals",
+              "flag": "closure-recorded",
+              "value": true
+            },
+            {
+              "type": "flag-equals",
+              "flag": "signature-copied",
+              "value": true
+            },
+            {
+              "type": "has-item",
+              "item": "carbon-copy"
+            }
+          ]
+        }
       }
     },
     {

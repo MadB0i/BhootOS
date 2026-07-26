@@ -40,6 +40,7 @@ export interface StoryGameplayDependencies {
 
 export interface RunStoryOptions {
   readonly initialSession?: StorySession;
+  readonly onTransition?: (session: StorySession) => void | Promise<void>;
   readonly signal?: AbortSignal;
   readonly animateText?: boolean;
   readonly choicePrompt?: string;
@@ -52,8 +53,7 @@ export type StoryGameplayErrorCode =
   | "session-invalid"
   | "view-failed"
   | "transition-failed"
-  | "presentation-failed"
-  | "input-failed";
+  | "persistence-failed";
 
 export type RunStoryResult =
   | {

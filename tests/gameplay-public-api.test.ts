@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   runStory,
   type RunStoryOptions,
@@ -12,6 +12,18 @@ import {
 import * as publicApi from "../src/index.js";
 
 describe("public gameplay API", () => {
+  it("exports exactly the reachable typed gameplay failure codes", () => {
+    type ReachableGameplayErrorCode =
+      | "invalid-options"
+      | "session-creation-failed"
+      | "session-invalid"
+      | "view-failed"
+      | "transition-failed"
+      | "persistence-failed";
+
+    expectTypeOf<StoryGameplayErrorCode>().toEqualTypeOf<ReachableGameplayErrorCode>();
+  });
+
   it("exports runStory without exposing internal adapters", () => {
     expect(runStory).toBeTypeOf("function");
     expect("StoryViewRenderer" in publicApi).toBe(false);
@@ -47,14 +59,14 @@ describe("public gameplay API", () => {
       choiceRequester,
     };
     const options: RunStoryOptions = { maxInvalidAttempts: 3 };
-    const code: StoryGameplayErrorCode = "input-failed";
+    const code: StoryGameplayErrorCode = "invalid-options";
     const result: RunStoryResult = await runStory(
       story,
       dependencies,
       options,
     );
 
-    expect(code).toBe("input-failed");
+    expect(code).toBe("invalid-options");
     expect(result.status).toBe("ended");
   });
 });

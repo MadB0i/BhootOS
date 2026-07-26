@@ -1,8 +1,8 @@
 # In-memory engine API
 
-BhootOS provides pure functions for traversing a validated Story Document v1 in
-memory. The engine has no terminal, input, timing, filesystem, environment, or
-persistence behavior.
+BhootOS provides pure functions for traversing validated Story Document v1 and
+v2 values in memory. The engine has no terminal, input, timing, filesystem,
+environment, or persistence behavior.
 
 ## Create a session
 
@@ -20,8 +20,9 @@ if (!result.ok) {
 ```
 
 `createStorySession` structurally parses and statically validates the supplied
-document before creating state. Expected story validation failures are returned
-as diagnostics.
+document before creating state. V1 sessions retain their original compact
+shape. V2 sessions add `storySchemaVersion: 2`, frozen flags, and a sorted,
+duplicate-free inventory.
 
 An initial session has step `0`, an empty history, and points to
 `entryNodeId`. It is `active` when the entry is a normal node and immediately
@@ -47,9 +48,9 @@ if (!viewed.ok) {
 }
 ```
 
-An active view contains the current node text and ordered choice `id`/`label`
-pairs. It deliberately omits `nextNodeId`; callers select by choice ID and the
-engine owns target resolution.
+An active view contains the current node text and currently visible ordered
+choice `id`/`label` pairs. V2 requirements are evaluated purely against session
+state. Hidden choices and `nextNodeId` values are omitted.
 
 An ending view contains the node text plus the ending ID and title.
 
@@ -74,10 +75,11 @@ if (!transitioned.ok) {
 A successful command:
 
 1. resolves the exact choice ID only at the current node;
-2. advances to its target;
-3. increments the step exactly once;
-4. appends exactly one history entry; and
-5. returns both the new session and its current view.
+2. applies v2 effects in document order to a temporary state;
+3. verifies ending requirements and target choice availability;
+4. commits atomically, advances, and increments the step once;
+5. appends one replayable history entry; and
+6. returns the new session and current filtered view.
 
 The result is `ended` when the target has an ending and remains `active`
 otherwise. Equal story, session, and command values produce equivalent results.
@@ -93,6 +95,9 @@ Expected failures use stable codes:
 | `current-node-missing` | The session's current node does not exist. |
 | `choice-not-found` | The choice is not available at the current node. |
 | `choice-target-missing` | The selected choice references a missing node. |
+| `no-available-choices` | State leaves an active node with zero visible choices. |
+| `effect-failed` | An ordered effect could not be applied atomically. |
+| `ending-requirements-not-met` | The target ending is not valid for current state. |
 
 ## History semantics
 
@@ -104,6 +109,9 @@ interface StoryHistoryEntry {
   readonly fromNodeId: string;
   readonly choiceId: string;
   readonly toNodeId: string;
+  readonly effects?: readonly StoryEffectV2[];
+  readonly flags?: Readonly<Record<string, StoryFlagValue>>;
+  readonly inventory?: readonly string[];
 }
 ```
 
@@ -111,7 +119,9 @@ History steps begin at `1` and remain sequential. Entries must form a
 continuous path beginning at the story entry node, every choice and target must
 match the story, and the final target must equal `currentNodeId`. The engine
 checks these invariants whenever a session is viewed or transitioned, so a
-forged session cannot skip directly to another node or ending.
+forged session cannot skip directly to another node or ending. For v2, replay
+also checks choice visibility, applied effects, ending gates, flags, inventory,
+and every recorded resulting-state snapshot.
 
 ## Cycles
 
@@ -177,5 +187,6 @@ if (!finished.ok || finished.session.status !== "ended") {
 console.log(finished.session.endingId); // "safe"
 ```
 
-The API does not currently provide interactive terminal gameplay, inventory,
-conditions, effects, saves, or a CLI play command.
+Adding an existing item is idempotent. Removing a missing item is a typed
+`effect-failed` result, and no earlier effect from that choice is committed.
+The engine itself does not save; hosts can use the gameplay transition hook.

@@ -1,30 +1,40 @@
 # Play command
 
-`bhootos play <story-file>` loads, validates, and plays one explicit Story
-Document v1 JSON file:
+`bhootos play [story-file]` plays the bundled episode when no path is supplied,
+or loads and plays one explicit Story Document v1 or v2 JSON file:
 
 ```bash
 bhootos play ./examples/minimal-story.json
+bhootos play
 bhootos --fast --no-color --ascii play ./examples/minimal-story.json
 bhootos play ./examples/minimal-story.json --fast --no-color --ascii
 ```
 
-The path is required and must be the only positional argument. BhootOS does not
-search directories, choose a default story, read a manifest, or fetch network
-content. Relative paths are resolved by Node from the current working
-directory.
+At most one path is accepted. BhootOS does not search directories, read a
+manifest, or fetch network content. Relative custom paths are resolved by Node
+from the current working directory. With no path, the packaged **Kaun Hai?**
+file is resolved from the installed CLI location instead.
+
+Bundled play starts a fresh autosaved run. Use `bhootos continue` to resume it,
+`bhootos restart` to replace it explicitly, and `bhootos endings` to inspect
+discovered ending titles. Custom stories are not automatically saved in this
+release. The storage contract is documented in
+[`save-format.md`](save-format.md).
 
 ## Terminal behavior
 
 Story narrative, numbered choices, endings, and the `> ` choice prompt are
 written to stdout. Load, validation, input, and gameplay errors are written to
-stderr. The command does not display the boot screen.
+stderr. The command does not display the full boot screen. Root `bhootos`
+writes a brief two-line brand intro and then performs the same fresh bundled
+play. `bhootos intro` retains the full boot sequence.
 
 The root options `--no-color`, `--ascii`, `--reduced-motion`, and `--fast` use
 the same capability detection and renderer behavior as the existing CLI. They
 may appear before or after `play`. Non-TTY input and output use the same
-line-oriented protocol without enabling raw mode, clearing the screen, or
-closing caller-owned streams.
+line-oriented protocol without clearing the screen or closing caller-owned
+streams. Interactive raw mode is isolated to active typewriter skipping and is
+restored before each line request.
 
 Expected loading failures contain no stack trace. A validation failure starts
 with the source-aware summary and retains diagnostics in their original order:
@@ -42,7 +52,8 @@ fatal UTF-8 decoding, JSON parsing, and full graph validation—are documented i
 
 Enter a canonical 1-based choice number such as `1` and press Enter. Choice
 IDs are not accepted directly. Invalid lines use the existing bounded retry
-behavior; BhootOS does not enable raw mode or provide arrow-key menus.
+behavior. BhootOS uses raw mode only during interactive animation and does not
+provide arrow-key menus.
 
 EOF before an ending stops without a farewell or repeated narrative and exits
 with code `4`. `Ctrl-C` requests cancellation and exits with code `130`.
@@ -57,6 +68,8 @@ with code `4`. `Ctrl-C` requests cancellation and exits with code `130`.
 | `3` | The invalid-choice attempt limit was exhausted. |
 | `4` | Input reached EOF before the story ended. |
 | `5` | Gameplay returned a typed failure. |
+| `6` | `continue` found no active bundled run. |
+| `7` | The bundled save could not be safely read or written. |
 | `130` | Loading, rendering, or input was cancelled. |
 
 `Ctrl-C` aborts the active play operation through one temporary SIGINT listener.
@@ -66,7 +79,6 @@ unexpected rejections. BhootOS sets `process.exitCode`; it does not call
 
 ## Current limitations
 
-Only explicit local Story Document v1 files are supported. The package includes
-**Kaun Hai?** as a story file, but there is no automatic episode selection,
-story discovery, remote loading, save/continue, inventory, arrow-key
-navigation, sound, or raw-terminal interface.
+The package includes **Kaun Hai?** as the no-path default for `play`. There is
+no episode discovery, remote loading, custom-story persistence, arrow-key
+navigation, sound, or persistent raw-terminal interface.

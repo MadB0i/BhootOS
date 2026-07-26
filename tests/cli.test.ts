@@ -22,9 +22,14 @@ function captureRuntime(
       env: {},
       platform: "linux",
       nodeVersion: "v20.0.0",
+      workingDirectory: "/work",
       stdout: (text) => stdout.push(text),
       stderr: (text) => stderr.push(text),
+      bundledStoryFile: "package/episodes/kaun-hai/story.json",
       playStory: async () => 0,
+      runBundled: async () => 0,
+      validateStory: async () => 0,
+      createStory: async () => 0,
       addSigintListener: () => undefined,
       removeSigintListener: () => undefined,
       ...overrides,
@@ -107,6 +112,45 @@ describe("runCli", () => {
     expect(stderr).toEqual(["bhootos: write failed\n"]);
   });
 
+  it("treats an asynchronous broken pipe as a clean termination", async () => {
+    const capture = captureRuntime(["play", "story.json"], {
+      playStory: async () => {
+        throw Object.assign(new Error("broken pipe"), { code: "EPIPE" });
+      },
+    });
+
+    expect(await runCli(capture.runtime)).toBe(0);
+    expect(capture.stderr).toEqual([]);
+  });
+
+  it("launches the bundled episode from the root after a brief intro", async () => {
+    const runBundled = vi.fn(async () => 0);
+    const capture = captureRuntime(["--fast", "--ascii"], { runBundled });
+
+    expect(await runCli(capture.runtime)).toBe(0);
+    expect(capture.stdout.join("")).toBe(
+      "BHOOT/OS\nHaunted Terminal Runtime\n\n",
+    );
+    expect(runBundled).toHaveBeenCalledWith(
+      "play",
+      expect.objectContaining({
+        fast: true,
+        capabilities: expect.objectContaining({ supportsUnicode: false }),
+      }),
+    );
+  });
+
+  it("keeps the full boot sequence available as intro", async () => {
+    const runBundled = vi.fn(async () => 0);
+    const capture = captureRuntime(["intro", "--fast", "--no-color"], {
+      runBundled,
+    });
+
+    expect(await runCli(capture.runtime)).toBe(0);
+    expect(capture.stdout.join("")).toContain("Unknown processes detected: 2");
+    expect(runBundled).not.toHaveBeenCalled();
+  });
+
   it("preserves help and version without process exit", async () => {
     const help = captureRuntime(["--help"]);
     const doctorHelp = captureRuntime(["doctor", "--help"]);
@@ -121,9 +165,9 @@ describe("runCli", () => {
     expect(doctorHelp.stdout.join("")).toContain("Global Options:");
     expect(doctorHelp.stdout.join("")).toContain("--no-color");
     expect(await runCli(playHelp.runtime)).toBe(0);
-    expect(playHelp.stdout.join("")).toContain("<story-file>");
+    expect(playHelp.stdout.join("")).toContain("[story-file]");
     expect(playHelp.stdout.join("")).toContain(
-      "play a story from an explicit JSON file",
+      "play the bundled episode or an explicit story file",
     );
     expect(playHelp.stdout.join("")).toContain("Global Options:");
     expect(await runCli(version.runtime)).toBe(0);
@@ -157,7 +201,6 @@ describe("runCli", () => {
   });
 
   it.each([
-    [[], /required argument 'story-file'/],
     [["story.json", "extra.json"], /too many arguments/],
     [["story.json", "--unknown"], /unknown option/],
   ])("rejects invalid play arguments: %j", async (args, message) => {
@@ -167,6 +210,77 @@ describe("runCli", () => {
     expect(await runCli(capture.runtime)).toBe(1);
     expect(capture.stderr.join("")).toMatch(message);
     expect(playStory).not.toHaveBeenCalled();
+  });
+
+  it("plays the package-relative bundled episode when no path is supplied", async () => {
+    const playStory = vi.fn(async () => 0);
+    const runBundled = vi.fn(async () => 0);
+    const capture = captureRuntime(["play"], { playStory, runBundled });
+
+    expect(await runCli(capture.runtime)).toBe(0);
+    expect(runBundled).toHaveBeenCalledWith(
+      "play",
+      expect.objectContaining({ fast: false }),
+    );
+    expect(playStory).not.toHaveBeenCalled();
+  });
+
+  it("marks an explicit story path as custom", async () => {
+    const playStory = vi.fn(async () => 0);
+    const capture = captureRuntime(["play", "custom.json"], { playStory });
+
+    expect(await runCli(capture.runtime)).toBe(0);
+    expect(playStory).toHaveBeenCalledWith(
+      "custom.json",
+      expect.objectContaining({ bundledEpisode: false }),
+    );
+  });
+
+  it.each(["continue", "restart", "endings"] as const)(
+    "runs the bundled %s command with global capabilities",
+    async (command) => {
+      const runBundled = vi.fn(async () => 0);
+      const capture = captureRuntime(
+        [command, "--fast", "--ascii", "--no-color"],
+        { runBundled },
+      );
+
+      expect(await runCli(capture.runtime)).toBe(0);
+      expect(runBundled).toHaveBeenCalledWith(
+        command,
+        expect.objectContaining({
+          fast: true,
+          capabilities: expect.objectContaining({
+            supportsColor: false,
+            supportsUnicode: false,
+          }),
+        }),
+      );
+    },
+  );
+
+  it("dispatches validate without starting gameplay", async () => {
+    const validateStory = vi.fn(async () => 2);
+    const playStory = vi.fn(async () => 0);
+    const capture = captureRuntime(["validate", "broken.json", "--no-color"], {
+      validateStory,
+      playStory,
+    });
+
+    expect(await runCli(capture.runtime)).toBe(2);
+    expect(validateStory).toHaveBeenCalledWith("broken.json");
+    expect(playStory).not.toHaveBeenCalled();
+  });
+
+  it("dispatches create-story inside the captured working directory", async () => {
+    const createStory = vi.fn(async () => 0);
+    const capture = captureRuntime(["create-story", "haunted-station"], {
+      createStory,
+      workingDirectory: "/safe/work",
+    });
+
+    expect(await runCli(capture.runtime)).toBe(0);
+    expect(createStory).toHaveBeenCalledWith("haunted-station", "/safe/work");
   });
 
   it("aborts on SIGINT and removes the temporary listener", async () => {

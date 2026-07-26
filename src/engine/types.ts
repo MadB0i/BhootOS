@@ -1,10 +1,22 @@
 import type { StoryDiagnostic } from "../story/index.js";
+import type {
+  StoryEffectV2,
+  StoryFlagValue,
+} from "../story/types.js";
+
+export interface StoryRuntimeState {
+  readonly flags: Readonly<Record<string, StoryFlagValue>>;
+  readonly inventory: readonly string[];
+}
 
 export interface StoryHistoryEntry {
   readonly step: number;
   readonly fromNodeId: string;
   readonly choiceId: string;
   readonly toNodeId: string;
+  readonly effects?: readonly StoryEffectV2[];
+  readonly flags?: Readonly<Record<string, StoryFlagValue>>;
+  readonly inventory?: readonly string[];
 }
 
 export type StorySessionStatus = "active" | "ended";
@@ -16,6 +28,9 @@ export interface StorySession {
   readonly endingId?: string;
   readonly step: number;
   readonly history: readonly StoryHistoryEntry[];
+  readonly storySchemaVersion?: 2;
+  readonly flags?: Readonly<Record<string, StoryFlagValue>>;
+  readonly inventory?: readonly string[];
 }
 
 export interface StoryViewChoice {
@@ -54,7 +69,10 @@ export type StoryTransitionErrorCode =
   | "session-ended"
   | "current-node-missing"
   | "choice-not-found"
-  | "choice-target-missing";
+  | "choice-target-missing"
+  | "no-available-choices"
+  | "effect-failed"
+  | "ending-requirements-not-met";
 
 export interface StoryEngineFailure {
   readonly ok: false;

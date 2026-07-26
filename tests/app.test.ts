@@ -29,7 +29,7 @@ describe("runApp", () => {
       fast: true,
     });
 
-    const output = stdout.mock.calls.map(([s]: [string]) => s).join("");
+    const output = stdout.mock.calls.map((call) => String(call[0])).join("");
     expect(output).toContain("BHOOT/OS");
     expect(output).toContain("Haunted Terminal Runtime");
     expect(output).toContain("Human processes detected: 1");
@@ -47,7 +47,7 @@ describe("runApp", () => {
       fast: true,
     });
 
-    const output = stdout.mock.calls.map(([s]: [string]) => s).join("");
+    const output = stdout.mock.calls.map((call) => String(call[0])).join("");
     const matches = output.match(/Kaun hai wahan\?/g);
     expect(matches).toHaveLength(1);
   });
@@ -148,7 +148,7 @@ describe("doctorReport", () => {
       nodeVersion: "v20.0.0",
     });
 
-    const output = stdout.mock.calls.map(([s]: [string]) => s).join("");
+    const output = stdout.mock.calls.map((call) => String(call[0])).join("");
     expect(output).toContain("BhootOS Terminal Doctor");
     expect(output).toContain("Interactive: yes");
     expect(output).toContain("Color: yes");
@@ -175,7 +175,7 @@ describe("doctorReport", () => {
       nodeVersion: "v22.0.0",
     });
 
-    const output = stdout.mock.calls.map(([s]: [string]) => s).join("");
+    const output = stdout.mock.calls.map((call) => String(call[0])).join("");
     expect(output).toContain("Interactive: no");
     expect(output).toContain("Color: no");
     expect(output).toContain("Unicode: no");
@@ -196,7 +196,7 @@ describe("doctorReport", () => {
       nodeVersion: "v22.0.0",
     });
 
-    const output = stdout.mock.calls.map(([s]: [string]) => s).join("");
+    const output = stdout.mock.calls.map((call) => String(call[0])).join("");
     expect(output).not.toContain("Fast");
   });
 });

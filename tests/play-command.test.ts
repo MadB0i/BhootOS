@@ -127,6 +127,29 @@ describe("executePlayCommand", () => {
     ]);
   });
 
+  it("distinguishes a missing bundled installation from a custom path error", async () => {
+    const capture = dependencies({
+      ok: false,
+      stage: "read",
+      code: "read-failed",
+      readCode: "file-not-found",
+      sourceName: "package/episodes/kaun-hai/story.json",
+      message:
+        "Story file was not found: package/episodes/kaun-hai/story.json",
+    });
+
+    expect(
+      await executePlayCommand(
+        "package/episodes/kaun-hai/story.json",
+        capture.value,
+        { bundledEpisode: true },
+      ),
+    ).toBe(2);
+    expect(capture.stderr.join("")).toContain(
+      "Bundled episode installation could not be read",
+    );
+  });
+
   it("maps loading cancellation without printing an error", async () => {
     const capture = dependencies({
       ok: false,

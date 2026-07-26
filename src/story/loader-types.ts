@@ -1,5 +1,5 @@
 import type { StoryDiagnostic } from "./diagnostics.js";
-import type { StoryDocumentV1 } from "./types.js";
+import type { StoryDocument } from "./types.js";
 
 export const DEFAULT_STORY_FILE_MAX_BYTES = 1024 * 1024;
 
@@ -63,7 +63,7 @@ export type LoadStoryResult =
       readonly ok: true;
       readonly sourceName: string;
       readonly byteLength: number;
-      readonly story: StoryDocumentV1;
+      readonly story: StoryDocument;
       readonly diagnostics: readonly StoryDiagnostic[];
     }
   | {

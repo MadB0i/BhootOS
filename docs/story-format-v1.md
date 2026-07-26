@@ -1,8 +1,8 @@
 # Story Document v1
 
 Story Document v1 is BhootOS's versioned JSON format for a static branching
-story graph. Parsing and validation are available as a library API; executing
-the graph is outside the current release.
+story graph. Parsing, validation, loading, engine traversal, and CLI play all
+remain supported alongside Story Document v2.
 
 ## Document fields
 

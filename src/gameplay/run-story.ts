@@ -12,7 +12,7 @@ import type {
   StoryView,
   StoryViewResult,
 } from "../engine/types.js";
-import type { StoryDocumentV1 } from "../story/types.js";
+import type { StoryDocument } from "../story/types.js";
 import type { StoryDiagnostic } from "../story/diagnostics.js";
 import type {
   RunStoryOptions,
@@ -25,20 +25,20 @@ import type {
 const DEFAULT_MAX_INVALID_ATTEMPTS = 3;
 
 interface StoryGameplayEngine {
-  createSession(story: StoryDocumentV1): StorySessionCreationResult;
+  createSession(story: StoryDocument): StorySessionCreationResult;
   getView(
-    story: StoryDocumentV1,
+    story: StoryDocument,
     session: StorySession,
   ): StoryViewResult;
   transition(
-    story: StoryDocumentV1,
+    story: StoryDocument,
     session: StorySession,
     choiceId: string,
   ): StoryTransitionResult;
 }
 
 export function runStory(
-  story: StoryDocumentV1,
+  story: StoryDocument,
   dependencies: StoryGameplayDependencies,
   options: RunStoryOptions = {},
 ): Promise<RunStoryResult> {
@@ -54,7 +54,7 @@ export function runStory(
 }
 
 export async function runStoryWithEngine(
-  story: StoryDocumentV1,
+  story: StoryDocument,
   dependencies: StoryGameplayDependencies,
   options: RunStoryOptions,
   engine: StoryGameplayEngine,
@@ -214,6 +214,19 @@ export async function runStoryWithEngine(
 
           session = transitioned.session;
           view = transitioned.view;
+          if (options.onTransition !== undefined) {
+            try {
+              await options.onTransition(session);
+            } catch (error: unknown) {
+              return failure(
+                "persistence-failed",
+                error instanceof Error
+                  ? error.message
+                  : "Story progress could not be saved.",
+                { session },
+              );
+            }
+          }
           if (isAborted(options.signal)) {
             return cancelled(session);
           }

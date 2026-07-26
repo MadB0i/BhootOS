@@ -53,7 +53,9 @@
     "test:watch": "vitest",
     "verify:dist": "node scripts/verify-dist.mjs",
     "verify:package": "node scripts/verify-package.mjs",
-    "check": "tsc --noEmit && vitest run && tsup && node scripts/verify-dist.mjs && node scripts/verify-package.mjs",
+    "verify:scenarios": "node scripts/verify-scenarios.mjs",
+    "verify:installed": "node scripts/verify-installed.mjs",
+    "check": "tsc --noEmit && vitest run && tsup && node scripts/verify-dist.mjs && node scripts/verify-scenarios.mjs && node scripts/verify-package.mjs",
     "prepack": "tsup",
     "prepublishOnly": "npm run check"
   },
@@ -66,7 +68,13 @@
     "tsup": "^8.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.4.0",
-    "vitest": "^1.6.0"
+    "vitest": "^3.2.6"
+  },
+  "pnpm": {
+    "overrides": {
+      "esbuild": "0.28.1",
+      "vite": "6.4.3"
+    }
   },
   "license": "MIT"
 }

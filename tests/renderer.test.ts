@@ -20,6 +20,26 @@ function fakeScheduler() {
 }
 
 describe("TerminalRenderer", () => {
+  it("does not activate the skip listener in fast or noninteractive output", async () => {
+    const begin = vi.fn();
+    const fast = new TerminalRenderer({
+      capabilities: makeCaps({ isInteractive: true }),
+      stdout: vi.fn(),
+      stderr: vi.fn(),
+      fast: true,
+      animationSkipper: { begin },
+    });
+    const noninteractive = new TerminalRenderer({
+      capabilities: makeCaps({ isInteractive: false }),
+      stdout: vi.fn(),
+      stderr: vi.fn(),
+      animationSkipper: { begin },
+    });
+
+    await fast.typewrite("fast");
+    await noninteractive.typewrite("plain");
+    expect(begin).not.toHaveBeenCalled();
+  });
   it("color-disabled output contains no ANSI codes", () => {
     const stdout = vi.fn();
     const stderr = vi.fn();
@@ -30,7 +50,7 @@ describe("TerminalRenderer", () => {
     });
     r.renderBootScreen();
     r.renderBootScreenFooter();
-    const output = stdout.mock.calls.map(([s]: [string]) => s).join("");
+    const output = stdout.mock.calls.map((call) => String(call[0])).join("");
     expect(output).not.toContain("\u001b[");
   });
 
@@ -44,7 +64,7 @@ describe("TerminalRenderer", () => {
     });
     r.renderBootScreen();
     r.renderBootScreenFooter();
-    const output = stdout.mock.calls.map(([s]: [string]) => s).join("");
+    const output = stdout.mock.calls.map((call) => String(call[0])).join("");
     expect(output).toContain("\u2554");
     expect(output).toContain("\u2557");
     expect(output).toContain("\u2551");
@@ -61,7 +81,7 @@ describe("TerminalRenderer", () => {
     });
     r.renderBootScreen();
     r.renderBootScreenFooter();
-    const output = stdout.mock.calls.map(([s]: [string]) => s).join("");
+    const output = stdout.mock.calls.map((call) => String(call[0])).join("");
     expect(output).not.toContain("\u2554");
     expect(output).not.toContain("\u2557");
     expect(output).not.toContain("\u255a");
@@ -79,7 +99,7 @@ describe("TerminalRenderer", () => {
       stderr,
     });
     r.renderBootScreen();
-    const output = stdout.mock.calls.map(([s]: [string]) => s).join("");
+    const output = stdout.mock.calls.map((call) => String(call[0])).join("");
     expect(output).toContain("BHOOT/OS");
     expect(output).toContain("Haunted Terminal Runtime");
     expect(output).toContain("Human processes detected: 1");
@@ -188,7 +208,7 @@ describe("TerminalRenderer", () => {
     await r.typewrite("hi", { characterDelayMs: 1 });
 
     expect(sched.sleep).toHaveBeenCalled();
-    const output = stdout.mock.calls.map(([s]: [string]) => s).join("");
+    const output = stdout.mock.calls.map((call) => String(call[0])).join("");
     expect(output).toBe("hi");
   });
 
@@ -205,7 +225,7 @@ describe("TerminalRenderer", () => {
 
     await r.typewriteLine("hi", { characterDelayMs: 1 });
 
-    const output = stdout.mock.calls.map(([s]: [string]) => s).join("");
+    const output = stdout.mock.calls.map((call) => String(call[0])).join("");
     expect(output).toBe("hi\n");
   });
 
@@ -246,7 +266,7 @@ describe("TerminalRenderer", () => {
       r.typewriteLine("hello", { signal: ac.signal, characterDelayMs: 10 }),
     ).rejects.toThrow();
 
-    const output = stdout.mock.calls.map(([s]: [string]) => s).join("");
+    const output = stdout.mock.calls.map((call) => String(call[0])).join("");
     expect(output).not.toContain("\n");
   });
 
@@ -367,7 +387,7 @@ describe("TerminalRenderer", () => {
       renderer.renderBootScreenFooter();
 
       const lines = stdout.mock.calls
-        .map(([text]: [string]) => text)
+        .map((call) => String(call[0]))
         .join("")
         .trimEnd()
         .split("\n");

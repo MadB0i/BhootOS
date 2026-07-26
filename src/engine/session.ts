@@ -1,29 +1,67 @@
 import { parseStoryDocument } from "../story/parser.js";
+import { createDiagnostic } from "../story/diagnostics.js";
 import type {
-  StoryDocumentV1,
-  StoryNodeV1,
+  StoryChoiceV2,
+  StoryDocument,
+  StoryEffectV2,
+  StoryEndingV2,
+  StoryFlagValue,
+  StoryNode,
 } from "../story/types.js";
+import {
+  applyEffects,
+  cloneEffects,
+  evaluateCondition,
+  freezeRuntimeState,
+  initialRuntimeState,
+  runtimeStatesEqual,
+} from "./state.js";
 import type {
   StoryEngineFailure,
+  StoryHistoryEntry,
   StorySession,
   StorySessionCreationResult,
   StoryTransitionErrorCode,
+  StoryRuntimeState,
   StoryView,
   StoryViewResult,
 } from "./types.js";
 
 type UnknownRecord = Readonly<Record<string, unknown>>;
 
+const SESSION_FIELDS = [
+  "storyId",
+  "currentNodeId",
+  "status",
+  "endingId",
+  "step",
+  "history",
+  "storySchemaVersion",
+  "flags",
+  "inventory",
+] as const;
+
+const HISTORY_FIELDS = [
+  "step",
+  "fromNodeId",
+  "choiceId",
+  "toNodeId",
+  "effects",
+  "flags",
+  "inventory",
+] as const;
+
 export type SessionInspection =
   | {
       readonly ok: true;
       readonly session: StorySession;
-      readonly currentNode: StoryNodeV1;
+      readonly currentNode: StoryNode;
+      readonly state?: StoryRuntimeState;
     }
   | StoryEngineFailure;
 
 export function createStorySession(
-  story: StoryDocumentV1,
+  story: StoryDocument,
 ): StorySessionCreationResult {
   const parsed = parseStoryDocument(story);
   if (!parsed.ok) {
@@ -40,29 +78,51 @@ export function createStorySession(
     throw new Error("Validated story is missing its entry node.");
   }
 
-  const session: StorySession =
-    entryNode.ending === undefined
-      ? Object.freeze({
-          storyId: parsed.story.id,
-          currentNodeId: entryNode.id,
-          status: "active",
-          step: 0,
-          history: Object.freeze([]),
-        })
-      : Object.freeze({
-          storyId: parsed.story.id,
-          currentNodeId: entryNode.id,
-          status: "ended",
-          endingId: entryNode.ending.id,
-          step: 0,
-          history: Object.freeze([]),
-        });
+  const state = initialRuntimeState(parsed.story);
+  const entryEnding =
+    entryNode.ending as StoryEndingV2 | undefined;
+  if (
+    parsed.story.schemaVersion === 2 &&
+    entryEnding?.requires !== undefined &&
+    state !== undefined &&
+    !evaluateCondition(entryEnding.requires, state)
+  ) {
+    return Object.freeze({
+      ok: false,
+      diagnostics: Object.freeze([
+        createDiagnostic(
+          "contradictory-requirement",
+          "error",
+          "$.entryNodeId",
+          "Entry ending requirements are not satisfied by the initial state.",
+        ),
+      ]),
+    });
+  }
+
+  const session: StorySession = Object.freeze({
+    storyId: parsed.story.id,
+    currentNodeId: entryNode.id,
+    status: entryNode.ending === undefined ? "active" : "ended",
+    ...(entryNode.ending === undefined
+      ? {}
+      : { endingId: entryNode.ending.id }),
+    step: 0,
+    history: Object.freeze([]),
+    ...(state === undefined
+      ? {}
+      : {
+          storySchemaVersion: 2 as const,
+          flags: state.flags,
+          inventory: state.inventory,
+        }),
+  });
 
   return Object.freeze({ ok: true, session });
 }
 
 export function getStoryView(
-  story: StoryDocumentV1,
+  story: StoryDocument,
   session: StorySession,
 ): StoryViewResult {
   const inspection = inspectStorySession(story, session);
@@ -70,19 +130,43 @@ export function getStoryView(
     return inspection;
   }
 
+  const view = createStoryView(
+    inspection.currentNode,
+    inspection.state,
+  );
+  if (view.status === "active" && view.choices.length === 0) {
+    return engineFailure(
+      "no-available-choices",
+      `Node "${view.nodeId}" has no choices available in the current state.`,
+    );
+  }
   return Object.freeze({
     ok: true,
-    view: createStoryView(inspection.currentNode),
+    view,
   });
 }
 
 export function inspectStorySession(
-  story: StoryDocumentV1,
+  story: StoryDocument,
+  suppliedSession: StorySession,
+): SessionInspection {
+  try {
+    return inspectStorySessionUnsafe(story, suppliedSession);
+  } catch {
+    return invalidSession("Session could not be inspected safely.");
+  }
+}
+
+function inspectStorySessionUnsafe(
+  story: StoryDocument,
   suppliedSession: StorySession,
 ): SessionInspection {
   const input: unknown = suppliedSession;
   if (!isRecord(input)) {
     return invalidSession("Session must be an object.");
+  }
+  if (!hasOnlyKeys(input, SESSION_FIELDS)) {
+    return invalidSession("Session contains unsupported fields.");
   }
 
   const storyId = input["storyId"];
@@ -132,8 +216,31 @@ export function inspectStorySession(
     return invalidSession("Session history length must equal its step.");
   }
 
+  let replayState = initialRuntimeState(story);
+  let suppliedState: StoryRuntimeState | undefined;
+  if (story.schemaVersion === 2) {
+    if (input["storySchemaVersion"] !== 2) {
+      return invalidSession(
+        "A Story Document v2 session must contain storySchemaVersion 2.",
+      );
+    }
+    const parsedState = inspectRuntimeState(input);
+    if (!parsedState.ok) {
+      return invalidSession(parsedState.message);
+    }
+    suppliedState = parsedState.state;
+  } else if (
+    hasOwn(input, "storySchemaVersion") ||
+    hasOwn(input, "flags") ||
+    hasOwn(input, "inventory")
+  ) {
+    return invalidSession(
+      "A Story Document v1 session must not contain state fields.",
+    );
+  }
+
   const endingId = input["endingId"];
-  if (status === "active" && endingId !== undefined) {
+  if (status === "active" && hasOwn(input, "endingId")) {
     return invalidSession("An active session must not contain an endingId.");
   }
   if (
@@ -146,10 +253,16 @@ export function inspectStorySession(
   }
 
   let expectedFromNodeId = story.entryNodeId;
+  const replayedHistory: StoryHistoryEntry[] = [];
   for (const [historyIndex, unknownEntry] of history.entries()) {
     if (!isRecord(unknownEntry)) {
       return invalidSession(
         `History entry ${String(historyIndex)} must be an object.`,
+      );
+    }
+    if (!hasOnlyKeys(unknownEntry, HISTORY_FIELDS)) {
+      return invalidSession(
+        `History entry ${String(historyIndex)} contains unsupported fields.`,
       );
     }
 
@@ -204,6 +317,81 @@ export function inspectStorySession(
       );
     }
 
+    if (story.schemaVersion === 2 && replayState !== undefined) {
+      const statefulChoice = choice as StoryChoiceV2;
+      if (
+        statefulChoice.requires !== undefined &&
+        !evaluateCondition(statefulChoice.requires, replayState)
+      ) {
+        return invalidSession(
+          `History entry ${String(historyIndex)} uses hidden choice "${choiceId}".`,
+        );
+      }
+      const expectedEffects = statefulChoice.effects ?? [];
+      if (!effectsEqual(unknownEntry["effects"], expectedEffects)) {
+        return invalidSession(
+          `History entry ${String(historyIndex)} effects do not match choice "${choiceId}".`,
+        );
+      }
+      const applied = applyEffects(expectedEffects, replayState);
+      if (!applied.ok) {
+        return invalidSession(
+          `History entry ${String(historyIndex)} contains a failing effect: ${applied.message}`,
+        );
+      }
+      const entryState = inspectRuntimeState(unknownEntry);
+      if (!entryState.ok) {
+        return invalidSession(
+          `History entry ${String(historyIndex)} ${entryState.message}`,
+        );
+      }
+      if (!runtimeStatesEqual(entryState.state, applied.state)) {
+        return invalidSession(
+          `History entry ${String(historyIndex)} state does not match its effects.`,
+        );
+      }
+      const target = findStoryNode(story, toNodeId);
+      const targetEnding =
+        target?.ending as StoryEndingV2 | undefined;
+      if (
+        targetEnding?.requires !== undefined &&
+        !evaluateCondition(targetEnding.requires, applied.state)
+      ) {
+        return invalidSession(
+          `History entry ${String(historyIndex)} reaches an unavailable ending.`,
+        );
+      }
+      replayState = applied.state;
+      replayedHistory.push(
+        Object.freeze({
+          step: expectedStep,
+          fromNodeId,
+          choiceId,
+          toNodeId,
+          effects: cloneEffects(expectedEffects),
+          flags: entryState.state.flags,
+          inventory: entryState.state.inventory,
+        }),
+      );
+    } else if (
+      hasOwn(unknownEntry, "effects") ||
+      hasOwn(unknownEntry, "flags") ||
+      hasOwn(unknownEntry, "inventory")
+    ) {
+      return invalidSession(
+        `History entry ${String(historyIndex)} must not contain v2 state fields.`,
+      );
+    } else {
+      replayedHistory.push(
+        Object.freeze({
+          step: expectedStep,
+          fromNodeId,
+          choiceId,
+          toNodeId,
+        }),
+      );
+    }
+
     expectedFromNodeId = toNodeId;
   }
 
@@ -235,14 +423,62 @@ export function inspectStorySession(
     );
   }
 
+  if (
+    story.schemaVersion === 2 &&
+    status === "ended" &&
+    currentNode.ending !== undefined &&
+    (currentNode.ending as StoryEndingV2).requires !== undefined &&
+    replayState !== undefined &&
+    !evaluateCondition(
+      (currentNode.ending as StoryEndingV2).requires as NonNullable<
+        StoryEndingV2["requires"]
+      >,
+      replayState,
+    )
+  ) {
+    return invalidSession(
+      `Session ending "${currentNode.ending.id}" is unavailable in its replayed state.`,
+    );
+  }
+
+  if (
+    story.schemaVersion === 2 &&
+    replayState !== undefined &&
+    suppliedState !== undefined &&
+    !runtimeStatesEqual(replayState, suppliedState)
+  ) {
+    return invalidSession(
+      "Session flags and inventory do not match its history.",
+    );
+  }
+
+  const canonicalSession: StorySession = Object.freeze({
+    storyId,
+    currentNodeId,
+    status,
+    ...(status === "ended" ? { endingId: endingId as string } : {}),
+    step,
+    history: Object.freeze(replayedHistory),
+    ...(replayState === undefined
+      ? {}
+      : {
+          storySchemaVersion: 2 as const,
+          flags: replayState.flags,
+          inventory: replayState.inventory,
+        }),
+  });
   return Object.freeze({
     ok: true,
-    session: suppliedSession,
+    session: canonicalSession,
     currentNode,
+    ...(replayState === undefined ? {} : { state: replayState }),
   });
 }
 
-export function createStoryView(node: StoryNodeV1): StoryView {
+export function createStoryView(
+  node: StoryNode,
+  state?: StoryRuntimeState,
+): StoryView {
   if (node.ending !== undefined) {
     return Object.freeze({
       status: "ended",
@@ -255,12 +491,25 @@ export function createStoryView(node: StoryNodeV1): StoryView {
     });
   }
 
-  const choices = (node.choices ?? []).map((choice) =>
-    Object.freeze({
-      id: choice.id,
-      label: choice.label,
-    }),
-  );
+  const choices = (node.choices ?? [])
+    .filter(
+      (choice) =>
+        state === undefined ||
+        !("requires" in choice) ||
+        (choice as StoryChoiceV2).requires === undefined ||
+        evaluateCondition(
+          (choice as StoryChoiceV2).requires as NonNullable<
+            StoryChoiceV2["requires"]
+          >,
+          state,
+        ),
+    )
+    .map((choice) =>
+      Object.freeze({
+        id: choice.id,
+        label: choice.label,
+      }),
+    );
   return Object.freeze({
     status: "active",
     nodeId: node.id,
@@ -281,14 +530,122 @@ function invalidSession(message: string): StoryEngineFailure {
 }
 
 function findStoryNode(
-  story: StoryDocumentV1,
+  story: StoryDocument,
   nodeId: string,
-): StoryNodeV1 | undefined {
+): StoryNode | undefined {
   return story.nodes.find((node) => node.id === nodeId);
+}
+
+function inspectRuntimeState(
+  input: UnknownRecord,
+):
+  | { readonly ok: true; readonly state: StoryRuntimeState }
+  | { readonly ok: false; readonly message: string } {
+  const flagsInput = input["flags"];
+  if (!isRecord(flagsInput)) {
+    return {
+      ok: false,
+      message: "flags must be an object.",
+    };
+  }
+  const flags: Record<string, StoryFlagValue> = {};
+  for (const [flag, value] of Object.entries(flagsInput)) {
+    if (
+      typeof value !== "boolean" &&
+      typeof value !== "string" &&
+      !(typeof value === "number" && Number.isFinite(value))
+    ) {
+      return {
+        ok: false,
+        message: `flag "${flag}" must contain a valid scalar value.`,
+      };
+    }
+    defineOwnValue(flags, flag, value);
+  }
+
+  const inventoryInput = input["inventory"];
+  if (
+    !Array.isArray(inventoryInput) ||
+    !inventoryInput.every(isNonEmptyString)
+  ) {
+    return {
+      ok: false,
+      message: "inventory must be an array of non-empty item IDs.",
+    };
+  }
+  if (new Set(inventoryInput).size !== inventoryInput.length) {
+    return {
+      ok: false,
+      message: "inventory must not contain duplicate items.",
+    };
+  }
+  const state = freezeRuntimeState(flags, inventoryInput);
+  if (
+    JSON.stringify(state.inventory) !== JSON.stringify(inventoryInput)
+  ) {
+    return {
+      ok: false,
+      message: "inventory must use deterministic sorted order.",
+    };
+  }
+  return { ok: true, state };
 }
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function effectsEqual(
+  input: unknown,
+  expected: readonly StoryEffectV2[],
+): boolean {
+  if (!Array.isArray(input) || input.length !== expected.length) {
+    return false;
+  }
+  return expected.every((expectedEffect, index) => {
+    const candidate = input[index];
+    if (!isRecord(candidate) || candidate["type"] !== expectedEffect.type) {
+      return false;
+    }
+    switch (expectedEffect.type) {
+      case "set-flag":
+        return (
+          hasOnlyKeys(candidate, ["type", "flag", "value"]) &&
+          candidate["flag"] === expectedEffect.flag &&
+          candidate["value"] === expectedEffect.value
+        );
+      case "add-item":
+      case "remove-item":
+        return (
+          hasOnlyKeys(candidate, ["type", "item"]) &&
+          candidate["item"] === expectedEffect.item
+        );
+    }
+  });
+}
+
+function hasOnlyKeys(
+  value: UnknownRecord,
+  keys: readonly string[],
+): boolean {
+  return Object.keys(value).every((key) => keys.includes(key));
+}
+
+function hasOwn(value: UnknownRecord, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
+
+function defineOwnValue(
+  target: Record<string, StoryFlagValue>,
+  key: string,
+  value: StoryFlagValue,
+): void {
+  Object.defineProperty(target, key, {
+    value,
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  });
 }
 
 function isNonEmptyString(value: unknown): value is string {

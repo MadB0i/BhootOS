@@ -428,6 +428,41 @@ describe("runStory initial state", () => {
 });
 
 describe("runStory successful traversal", () => {
+  it("calls the transition hook after every successful transition", async () => {
+    const harness = dependencies([selected("advance"), selected("finish")]);
+    const saved: StorySession[] = [];
+
+    const result = await runStory(multiStepStory(), harness.value, {
+      onTransition: (session) => {
+        saved.push(session);
+      },
+    });
+
+    expect(result.status).toBe("ended");
+    expect(saved.map((session) => [session.step, session.status])).toEqual([
+      [1, "active"],
+      [2, "ended"],
+    ]);
+  });
+
+  it("returns a typed failure when progress persistence fails", async () => {
+    const harness = dependencies([selected("finish")]);
+
+    const result = await runStory(oneStepStory(), harness.value, {
+      onTransition: () => {
+        throw new Error("Save file could not be written.");
+      },
+    });
+
+    expect(result).toMatchObject({
+      status: "failed",
+      code: "persistence-failed",
+      message: "Save file could not be written.",
+      session: { status: "ended", step: 1 },
+    });
+    expect(harness.renderer.views.map((view) => view.nodeId)).toEqual(["start"]);
+  });
+
   it("plays one active node through one ending", async () => {
     const events: string[] = [];
     const harness = dependencies([selected("finish")], events);
@@ -927,7 +962,7 @@ describe("runStory failures", () => {
     ).rejects.toBe(failure);
   });
 
-  it("propagates an active-view renderer exception", async () => {
+  it("propagates an active-view renderer rejection unchanged", async () => {
     const failure = new Error("renderer failed");
     const harness = dependencies([]);
     harness.renderer.onRender = () => {
@@ -951,7 +986,7 @@ describe("runStory failures", () => {
     ).rejects.toBe(failure);
   });
 
-  it("propagates a choice requester exception", async () => {
+  it("propagates a choice requester rejection unchanged", async () => {
     const failure = new Error("requester failed");
     const harness = dependencies([failure]);
 

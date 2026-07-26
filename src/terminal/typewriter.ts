@@ -1,4 +1,5 @@
 import { CancellationError, type Scheduler } from "./scheduler.js";
+import { AnimationSkipRequest } from "../input/animation-skipper.js";
 
 export const DEFAULT_CHARACTER_DELAY_MS = 28;
 export const DEFAULT_PUNCTUATION_DELAY_MS = 120;
@@ -16,6 +17,7 @@ export interface TypewriterOptions {
   punctuationDelayMs?: number;
   enabled?: boolean;
   signal?: AbortSignal;
+  skipSignal?: AbortSignal;
 }
 
 export class TypewriterError extends TypeError {
@@ -54,6 +56,7 @@ export class Typewriter {
     const punctuationDelayMs = options.punctuationDelayMs ?? DEFAULT_PUNCTUATION_DELAY_MS;
     const enabled = options.enabled ?? true;
     const signal = options.signal;
+    const skipSignal = options.skipSignal;
 
     assertFiniteNonNegative(characterDelayMs, "characterDelayMs");
     assertFiniteNonNegative(punctuationDelayMs, "punctuationDelayMs");
@@ -77,9 +80,67 @@ export class Typewriter {
       this.write(char);
 
       if (index < chars.length - 1) {
+        if (isAbortedSignal(skipSignal)) {
+          finishSkippedAnimation(skipSignal, chars, index, this.write);
+          return;
+        }
         const delay = PUNCTUATION.has(char) ? punctuationDelayMs : characterDelayMs;
-        await this.scheduler.sleep(delay, signal);
+        try {
+          await sleepWithSkip(this.scheduler, delay, signal, skipSignal);
+        } catch (error: unknown) {
+          if (isAbortedSignal(skipSignal)) {
+            finishSkippedAnimation(skipSignal, chars, index, this.write);
+            return;
+          }
+          throw error;
+        }
       }
     }
   }
+}
+
+function isAbortedSignal(signal: AbortSignal | undefined): signal is AbortSignal {
+  return signal?.aborted === true;
+}
+
+async function sleepWithSkip(
+  scheduler: Scheduler,
+  delay: number,
+  signal: AbortSignal | undefined,
+  skipSignal: AbortSignal | undefined,
+): Promise<void> {
+  if (skipSignal === undefined) {
+    await scheduler.sleep(delay, signal);
+    return;
+  }
+  const combined = new AbortController();
+  const onAbort = (): void => combined.abort(new CancellationError());
+  const onSkip = (): void => combined.abort(skipSignal.reason);
+  signal?.addEventListener("abort", onAbort, { once: true });
+  skipSignal.addEventListener("abort", onSkip, { once: true });
+  if (signal?.aborted === true) {
+    onAbort();
+  } else if (skipSignal.aborted) {
+    onSkip();
+  }
+  try {
+    await scheduler.sleep(delay, combined.signal);
+  } finally {
+    signal?.removeEventListener("abort", onAbort);
+    skipSignal.removeEventListener("abort", onSkip);
+  }
+}
+
+function finishSkippedAnimation(
+  skipSignal: AbortSignal,
+  chars: readonly string[],
+  index: number,
+  write: (text: string) => void,
+): void {
+  if (!(skipSignal.reason instanceof AnimationSkipRequest)) {
+    throw skipSignal.reason instanceof Error
+      ? skipSignal.reason
+      : new Error("Animation input failed.");
+  }
+  write(chars.slice(index + 1).join(""));
 }

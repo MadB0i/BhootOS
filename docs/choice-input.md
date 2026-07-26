@@ -81,9 +81,10 @@ interface LineInput {
 ```
 
 Test and embedding code can implement this interface without using real stdin.
-The internal Node adapter accepts caller-owned readable and writable streams; it
-does not use global process streams, change raw mode, exit the process, or close
-those streams.
+The internal line adapter accepts caller-owned readable and writable streams;
+it does not use global process streams, change raw mode, exit the process, or
+close those streams. The separate animation skipper may use raw mode only
+before a line request and restores it before numbered input begins.
 
 `requestStoryChoice` performs exactly one `readLine` call:
 
@@ -112,4 +113,4 @@ transition, load stories, or orchestrate repeated prompts. A caller may pass a
 successful `choiceId` to `transitionStory`, or use the separate `runStory`
 library orchestrator to compose these operations.
 
-A `bhootos play` command is not implemented.
+The CLI uses this boundary for bundled and explicit custom play.

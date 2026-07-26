@@ -1,80 +1,80 @@
 # BhootOS
 
-BhootOS is the terminal foundation for a planned interactive-fiction runtime
-disguised as a haunted operating system.
+A polished terminal narrative runtime disguised as a haunted operating system.
 
-The current release provides:
+## Demo
 
-- deterministic terminal capability detection
-- Unicode and ASCII boot rendering
-- color, reduced-motion and fast-output controls
-- cancellable typewriter timing
-- a `doctor` command for inspecting terminal behavior
-- a versioned Story Document v1 JSON format
-- deterministic static story-graph validation
-- an importable TypeScript story API with declarations
-- a validated minimal example story
-- deterministic in-memory story traversal
-- immutable session snapshots with traversal history
-- choice selection by ID with typed failure outcomes
-- an internal capability-aware terminal presenter for engine views
-- reusable one-line input and numbered-choice selection boundaries
-- an injected, deterministic in-memory gameplay orchestrator
-- validated story loading through an injected text-reader boundary
-- an explicit-file `play` command composing loading and terminal gameplay
-- the first bundled episode, **Kaun Hai?**
+A short terminal recording is not checked in yet. Follow
+[`docs/demo-recording.md`](docs/demo-recording.md) to record the reproducible
+fast-mode route without adding generated media to the npm package.
 
-It does not include story discovery, raw input controls, inventory, saves or
-conditional effects.
+## Play
 
-## Requirements
+With BhootOS installed, one command starts the bundled **Kaun Hai?** episode:
 
-- Node.js 20 or newer
-- pnpm 9.15.4, pinned through `packageManager`
+```sh
+bhootos
+```
 
-## Development
+From this repository:
 
-```bash
+```sh
 pnpm install --frozen-lockfile
-pnpm dev
-pnpm typecheck
-pnpm test
 pnpm build
-pnpm check
+node dist/cli.js --fast
 ```
 
-`pnpm check` typechecks source and tests, runs the test suite, builds the CLI and
-library, executes built-artifact smoke tests and inspects the package dry run.
+The episode follows a late-night repair call in an old temple trust office,
+where a complaint closed in 1998 begins asking for a truthful witness. It has
+four endings, stateful evidence, autosaves, and roughly a 10–15 minute first
+playthrough.
 
-## CLI
+## Player commands
 
-```bash
-bhootos --fast --no-color --ascii
-bhootos doctor
-bhootos doctor --no-color --ascii
-bhootos play ./examples/minimal-story.json
-bhootos play ./examples/minimal-story.json --fast --no-color --ascii
+```text
+bhootos                         Start a fresh Kaun Hai? run
+bhootos play                    Start a fresh Kaun Hai? run
+bhootos play <story-file>       Play one custom v1 or v2 story
+bhootos continue                Resume the active bundled run
+bhootos restart                 Restart it, preserving known endings
+bhootos endings                 Show discovered ending titles
+bhootos intro                   Show the full boot sequence
+bhootos doctor                  Inspect terminal capabilities
 ```
 
-Global options may appear before or after `doctor` or `play`. `play` requires
-exactly one explicit Story Document v1 JSON path. See
-[`docs/play-command.md`](docs/play-command.md) for output and exit-code
-semantics.
+Global `--no-color`, `--ascii`, `--reduced-motion`, and `--fast` options work
+before or after a command. During animated text, Enter or Space reveals the
+remaining text without selecting a choice. `Ctrl+C` exits cleanly with code
+130.
 
-## Play the bundled episode from the repository
+## Story authors
 
-```bash
-pnpm build
-node dist/cli.js play ./episodes/kaun-hai/story.json
+```sh
+bhootos create-story haunted-station
+bhootos validate ./haunted-station/story.json
+bhootos play ./haunted-station/story.json
 ```
 
-**Kaun Hai?** follows a late-night repair call in an old temple trust office,
-where a complaint closed in 1998 begins asking for a truthful witness. It is
-BhootOS's first bundled episode, but `play` still requires its explicit file
-path; automatic episode selection is not implemented. Saves, inventory,
-conditions, effects, and arrow-key menus are also not implemented.
+Story Document v1 remains supported for static graphs. Version 2 adds declared
+flags, inventory, pure conditions, ordered atomic effects, conditional choices,
+and optional ending requirements—without scripts, evaluation, commands,
+network access, or randomness. Start with
+[`docs/story-authoring.md`](docs/story-authoring.md),
+[`docs/story-format-v1.md`](docs/story-format-v1.md), and
+[`docs/story-format-v2.md`](docs/story-format-v2.md).
 
-## Story Document API
+## Architecture highlights
+
+- strict, source-aware JSON parsing and deterministic graph validation;
+- immutable, replay-validated sessions with version-aware history;
+- a platform-neutral public library with no filesystem or process-stream
+  dependency in `dist/index.js`;
+- injected rendering, input, clock, story-reader, and save boundaries;
+- package-relative bundled content that works outside the current directory;
+- bounded UTF-8 story and save reads, atomic local saves, and no telemetry.
+
+The public API exposes parsing, validation, loading, traversal, player-safe
+views, numbered choice selection, and in-memory gameplay orchestration:
 
 ```ts
 import {
@@ -82,59 +82,51 @@ import {
   getStoryView,
   loadStory,
   parseStoryJson,
-  requestStoryChoice,
   runStory,
-  selectChoiceFromLine,
   transitionStory,
   validateStoryDocument,
-  type LineInput,
-  type StoryTextReader,
+  type StoryDocument,
   type StoryDocumentV1,
+  type StoryDocumentV2,
 } from "bhootos";
 ```
 
-The API parses unknown data without throwing for expected validation failures,
-returns path-aware diagnostics, and validates references and reachability in a
-Story Document v1 graph. See
-[`docs/story-format-v1.md`](docs/story-format-v1.md) for the field reference and
-[`examples/minimal-story.json`](examples/minimal-story.json) for a valid minimal
-document.
-
-The in-memory engine starts validated stories, exposes player-safe active or
-ending views, selects choices by ID, and returns a new immutable session with
-history for every successful transition. Forged or mismatched sessions and
-invalid commands return typed failures. See
-[`docs/engine-api.md`](docs/engine-api.md) for the complete API and transition
-semantics.
-
-The public library remains episode-agnostic; bundled content is not exported
-through the package root.
-
-Engine views can be rendered by the internal terminal presentation layer with
-the existing color, Unicode, fast-output, reduced-motion, typewriter, and
-cancellation behavior. It presents narrative, numbered choices, endings, and
-typed transition failures without exposing target node IDs. See
-[`docs/story-presentation.md`](docs/story-presentation.md).
-
-The public, injectable `LineInput` boundary can request exactly one line, and
-the numbered-choice selector maps canonical 1-based input to the corresponding
-active-view choice ID. Invalid input, EOF, and cancellation remain distinct,
-and no retry or engine transition occurs implicitly. See
-[`docs/choice-input.md`](docs/choice-input.md). Complete gameplay orchestration
-is provided separately by the library API.
-
-`runStory` composes the engine, injected view rendering, and injected choice
-requests into a deterministic in-memory loop. It supports fresh or resumed
-sessions, bounded invalid-input retries, EOF, cancellation, cycles, and ending
-results without accessing files or process streams. See
+See [`docs/architecture.md`](docs/architecture.md),
+[`docs/engine-api.md`](docs/engine-api.md), and
 [`docs/gameplay-api.md`](docs/gameplay-api.md).
 
-`loadStory` reads text through an injected platform-neutral reader, enforces a
-configurable 1 MiB default limit, and reuses the existing JSON parser and graph
-validator. It preserves source names and document diagnostic paths while
-keeping the Node filesystem adapter internal. See
-[`docs/story-loading.md`](docs/story-loading.md). The CLI composes that internal
-adapter only for the explicit path supplied to `play`.
+## Current limitations
+
+- custom story files are not autosaved;
+- there is one bundled episode and no remote catalog;
+- validation catches deterministic structural and graph defects but is not a
+  symbolic proof of every dynamic route;
+- input uses numbered choices rather than arrow-key menus;
+- there is no audio, network service, telemetry, or executable story scripting.
+
+## Development
+
+Requires Node.js 20 or newer and pnpm 9.15.4.
+
+```sh
+pnpm install --frozen-lockfile
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm check
+```
+
+`pnpm check` typechecks source and tests, runs the complete suite, builds the
+CLI and library, verifies distribution boundaries, and inspects the exact npm
+package contents.
+
+The npm tarball contains only runtime bundles, declarations, the bundled
+episode, this README, the license, and package metadata.
+
+## Contributing
+
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing code or story
+changes. Security reports follow [`SECURITY.md`](SECURITY.md).
 
 ## License
 

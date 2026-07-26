@@ -1,4 +1,4 @@
-import type { StoryDocumentV1 } from "./types.js";
+import type { StoryDocument } from "./types.js";
 
 export type StoryDiagnosticCode =
   | "invalid-json"
@@ -15,7 +15,15 @@ export type StoryDiagnosticCode =
   | "unreachable-node"
   | "unreachable-ending"
   | "no-reachable-ending"
-  | "reachable-node-without-ending-path";
+  | "reachable-node-without-ending-path"
+  | "duplicate-item-id"
+  | "unknown-flag"
+  | "invalid-condition"
+  | "condition-limit-exceeded"
+  | "contradictory-requirement"
+  | "invalid-effect"
+  | "effect-limit-exceeded"
+  | "no-statically-visible-choice";
 
 export type StoryDiagnosticSeverity = "error" | "warning";
 
@@ -29,7 +37,7 @@ export interface StoryDiagnostic {
 export type StoryValidationResult =
   | {
       readonly ok: true;
-      readonly story: StoryDocumentV1;
+      readonly story: StoryDocument;
       readonly diagnostics: readonly StoryDiagnostic[];
     }
   | {
@@ -58,7 +66,7 @@ export function failedResult(
 }
 
 export function completedResult(
-  story: StoryDocumentV1,
+  story: StoryDocument,
   diagnostics: readonly StoryDiagnostic[],
 ): StoryValidationResult {
   const stableDiagnostics = Object.freeze([...diagnostics]);

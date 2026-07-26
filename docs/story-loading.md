@@ -1,7 +1,7 @@
 # Story loading
 
 BhootOS provides a platform-neutral boundary for reading text, parsing Story
-Document v1 JSON, and returning a validated immutable story. Loading remains
+Document v1 or v2 JSON, and returning a validated immutable story. Loading remains
 separate from gameplay and presentation; the CLI composes those boundaries in
 its internal `play` command adapter.
 

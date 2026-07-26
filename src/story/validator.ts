@@ -4,10 +4,14 @@ import {
   type StoryDiagnostic,
   type StoryValidationResult,
 } from "./diagnostics.js";
-import type { StoryDocumentV1 } from "./types.js";
+import type {
+  StoryConditionV2,
+  StoryDocument,
+  StoryDocumentV2,
+} from "./types.js";
 
 export function validateStoryDocument(
-  story: StoryDocumentV1,
+  story: StoryDocument,
 ): StoryValidationResult {
   const diagnostics: StoryDiagnostic[] = [];
   const nodeIndexById = new Map<string, number>();
@@ -130,11 +134,15 @@ export function validateStoryDocument(
     );
   }
 
+  if (story.schemaVersion === 2) {
+    diagnostics.push(...validateStatefulSemantics(story));
+  }
+
   return completedResult(story, diagnostics);
 }
 
 function validateReachability(
-  story: StoryDocumentV1,
+  story: StoryDocument,
   nodeIndexById: ReadonlyMap<string, number>,
   entryNodeIndex: number,
 ): readonly StoryDiagnostic[] {
@@ -216,6 +224,237 @@ function validateReachability(
   }
 
   return diagnostics;
+}
+
+function validateStatefulSemantics(
+  story: StoryDocumentV2,
+): readonly StoryDiagnostic[] {
+  const diagnostics: StoryDiagnostic[] = [];
+  const flagIds = new Set(Object.keys(story.initialState.flags));
+  const potentiallyAvailableItems = new Set(
+    story.initialState.inventory,
+  );
+  for (const node of story.nodes) {
+    for (const choice of node.choices ?? []) {
+      for (const effect of choice.effects ?? []) {
+        if (effect.type === "add-item") {
+          potentiallyAvailableItems.add(effect.item);
+        }
+      }
+    }
+  }
+
+  for (const [nodeIndex, node] of story.nodes.entries()) {
+    const choices = node.choices ?? [];
+    let impossibleChoices = 0;
+    for (const [choiceIndex, choice] of choices.entries()) {
+      const path = `$.nodes[${String(nodeIndex)}].choices[${String(choiceIndex)}]`;
+      if (choice.requires !== undefined) {
+        validateConditionReferences(
+          choice.requires,
+          `${path}.requires`,
+          flagIds,
+          diagnostics,
+        );
+        if (isStaticallyContradictory(choice.requires)) {
+          impossibleChoices += 1;
+          diagnostics.push(
+            createDiagnostic(
+              "contradictory-requirement",
+              "error",
+              `${path}.requires`,
+              "Choice requirement is always false.",
+            ),
+          );
+        }
+      }
+      for (const [effectIndex, effect] of (
+        choice.effects ?? []
+      ).entries()) {
+        if (effect.type === "set-flag" && !flagIds.has(effect.flag)) {
+          diagnostics.push(
+            createDiagnostic(
+              "unknown-flag",
+              "error",
+              `${path}.effects[${String(effectIndex)}].flag`,
+              `Effect references undeclared flag "${effect.flag}".`,
+            ),
+          );
+        }
+        if (
+          effect.type === "remove-item" &&
+          !potentiallyAvailableItems.has(effect.item)
+        ) {
+          diagnostics.push(
+            createDiagnostic(
+              "invalid-effect",
+              "error",
+              `${path}.effects[${String(effectIndex)}].item`,
+              `Item "${effect.item}" can never be present before removal.`,
+            ),
+          );
+        }
+      }
+    }
+
+    if (
+      choices.length > 0 &&
+      impossibleChoices === choices.length
+    ) {
+      diagnostics.push(
+        createDiagnostic(
+          "no-statically-visible-choice",
+          "error",
+          `$.nodes[${String(nodeIndex)}].choices`,
+          `Node "${node.id}" has no choice that can ever become visible.`,
+        ),
+      );
+    }
+
+    if (node.ending?.requires !== undefined) {
+      const path = `$.nodes[${String(nodeIndex)}].ending.requires`;
+      validateConditionReferences(
+        node.ending.requires,
+        path,
+        flagIds,
+        diagnostics,
+      );
+      if (isStaticallyContradictory(node.ending.requires)) {
+        diagnostics.push(
+          createDiagnostic(
+            "contradictory-requirement",
+            "error",
+            path,
+            "Ending requirement is always false.",
+          ),
+        );
+      }
+    }
+  }
+
+  return diagnostics;
+}
+
+function validateConditionReferences(
+  condition: StoryConditionV2,
+  path: string,
+  flagIds: ReadonlySet<string>,
+  diagnostics: StoryDiagnostic[],
+): void {
+  switch (condition.type) {
+    case "flag-equals":
+      if (!flagIds.has(condition.flag)) {
+        diagnostics.push(
+          createDiagnostic(
+            "unknown-flag",
+            "error",
+            `${path}.flag`,
+            `Condition references undeclared flag "${condition.flag}".`,
+          ),
+        );
+      }
+      break;
+    case "has-item":
+      break;
+    case "not":
+      validateConditionReferences(
+        condition.condition,
+        `${path}.condition`,
+        flagIds,
+        diagnostics,
+      );
+      break;
+    case "all":
+    case "any":
+      for (const [index, nested] of condition.conditions.entries()) {
+        validateConditionReferences(
+          nested,
+          `${path}.conditions[${String(index)}]`,
+          flagIds,
+          diagnostics,
+        );
+      }
+      break;
+  }
+}
+
+function isStaticallyContradictory(
+  condition: StoryConditionV2,
+): boolean {
+  if (condition.type === "any") {
+    return condition.conditions.every(isStaticallyContradictory);
+  }
+  if (condition.type !== "all") {
+    return false;
+  }
+  if (condition.conditions.some(isStaticallyContradictory)) {
+    return true;
+  }
+
+  const positive = new Set<string>();
+  const negative = new Set<string>();
+  const flagValues = new Map<string, string>();
+  for (const nested of condition.conditions) {
+    const atom = conditionAtom(nested);
+    if (atom === undefined) {
+      continue;
+    }
+    if (atom.negative) {
+      negative.add(atom.key);
+    } else {
+      positive.add(atom.key);
+    }
+    if (positive.has(atom.key) && negative.has(atom.key)) {
+      return true;
+    }
+    if (!atom.negative && atom.flag !== undefined) {
+      const previous = flagValues.get(atom.flag);
+      if (previous !== undefined && previous !== atom.value) {
+        return true;
+      }
+      flagValues.set(atom.flag, atom.value);
+    }
+  }
+  return false;
+}
+
+function conditionAtom(
+  condition: StoryConditionV2,
+):
+  | {
+      readonly key: string;
+      readonly negative: boolean;
+      readonly flag?: string;
+      readonly value: string;
+    }
+  | undefined {
+  if (condition.type === "flag-equals") {
+    const value = JSON.stringify(condition.value);
+    return {
+      key: `flag:${condition.flag}:${value}`,
+      negative: false,
+      flag: condition.flag,
+      value,
+    };
+  }
+  if (condition.type === "has-item") {
+    return {
+      key: `item:${condition.item}`,
+      negative: false,
+      value: "",
+    };
+  }
+  if (
+    condition.type === "not" &&
+    (condition.condition.type === "flag-equals" ||
+      condition.condition.type === "has-item")
+  ) {
+    const atom = conditionAtom(condition.condition);
+    return atom === undefined
+      ? undefined
+      : { ...atom, negative: true };
+  }
+  return undefined;
 }
 
 function traverse(

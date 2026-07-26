@@ -59,8 +59,9 @@ The 23-node graph contains 19 active nodes and four ending nodes.
   finding, and a declaration limited to what the present-day witness can
   actually prove.
 
-Branches converge only where the terminal displays the necessary audit trail,
-so later prose does not pretend that untracked evidence was collected.
+Branches converge only where the terminal displays the necessary audit trail.
+The v2 state model also prevents a player from recording a falsified closure
+before entering a surviving statement.
 
 ## Ending intent
 
@@ -74,19 +75,21 @@ so later prose does not pretend that untracked evidence was collected.
 - `fourth-bell`: The player knowingly tests a disputed warning. The result
   collapses witness, statement, and date without explaining the corridor away.
 
-## Story Document v1 constraints
+## Story Document v2 state
 
-The format has no inventory, flags, conditional text, or hidden state.
-Continuity therefore lives in direct branch structure. The carbon impression
-is read and immediately acted upon; the bell count advances through a dedicated
-node; and shared resolution scenes contain evidence displayed at that moment.
+The bundled episode uses v2 state sparingly and visibly:
 
-The current format cannot remember which fragments a player discovered before
-returning to a shared node. A future condition system could vary the final
-terminal summary, acknowledge accumulated evidence, or make the crow route
-alter later choices. Inventory could support physically carrying the brass key
-or original complaint, but this episode deliberately makes neither a hidden
-requirement.
+- shading the pressure copy adds `carbon-copy` to inventory;
+- entering either the carbon statement or the original statement records that
+  evidence in `carbon-statement-entered`;
+- the falsified-closure choice appears only after that evidence is entered;
+- comparing the signature records `signature-copied`;
+- the strongest ending requires the copied statement, the recorded closure,
+  and the signature finding together.
+
+The `complaint-opened` flag also records the direct opening action for future
+continuity without changing the present prose. Other branches and the three
+dangerous endings remain available without hidden scavenger-hunt requirements.
 
 ## Clichés deliberately avoided
 

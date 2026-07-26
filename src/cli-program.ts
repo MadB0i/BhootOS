@@ -4,6 +4,7 @@ import {
   detectTerminalCapabilities,
   type TerminalCapabilities,
 } from "./terminal/capabilities.js";
+import type { BundledCommand } from "./cli/bundled-save-runtime.js";
 
 interface CliOptions {
   readonly color: boolean;
@@ -19,16 +20,31 @@ export interface CliRuntime {
   readonly env: Readonly<Record<string, string | undefined>>;
   readonly platform: NodeJS.Platform;
   readonly nodeVersion: string;
+  readonly workingDirectory: string;
   readonly stdout: (text: string) => void;
   readonly stderr: (text: string) => void;
+  readonly bundledStoryFile: string;
   readonly playStory: (
     sourceName: string,
     options: {
       readonly capabilities: TerminalCapabilities;
       readonly fast: boolean;
       readonly signal: AbortSignal;
+      readonly bundledEpisode: boolean;
+      readonly interrupt: () => void;
     },
   ) => Promise<number>;
+  readonly runBundled: (
+    command: BundledCommand,
+    options: {
+      readonly capabilities: TerminalCapabilities;
+      readonly fast: boolean;
+      readonly signal: AbortSignal;
+      readonly interrupt: () => void;
+    },
+  ) => Promise<number>;
+  readonly validateStory: (sourceName: string) => Promise<number>;
+  readonly createStory: (name: string, workingDirectory: string) => Promise<number>;
   readonly addSigintListener: (listener: () => void) => void;
   readonly removeSigintListener: (listener: () => void) => void;
 }
@@ -46,6 +62,9 @@ export async function runCli(runtime: CliRuntime): Promise<number> {
     if (error instanceof CommanderError) {
       return error.exitCode;
     }
+    if (isBrokenPipe(error)) {
+      return 0;
+    }
 
     runtime.stderr(`bhootos: ${errorMessage(error)}\n`);
     return 1;
@@ -58,7 +77,7 @@ function createProgram(
 ): Command {
   const program = new Command()
     .name("bhootos")
-    .description("A terminal foundation for a haunted interactive-fiction runtime.")
+    .description("A haunted terminal narrative runtime.")
     .version(runtime.version)
     .option("--no-color", "disable colors")
     .option("--ascii", "force ASCII-only rendering")
@@ -73,7 +92,11 @@ function createProgram(
     .exitOverride();
 
   program.action(async () => {
-    await executeProgram(runtime, false, program.opts<CliOptions>());
+    const options = program.opts<CliOptions>();
+    runtime.stdout("BHOOT/OS\nHaunted Terminal Runtime\n\n");
+    setExitCode(
+      await executeBundledInteractive(runtime, "play", options),
+    );
   });
 
   program
@@ -85,13 +108,27 @@ function createProgram(
     });
 
   program
-    .command("play")
-    .description("play a story from an explicit JSON file")
-    .argument("<story-file>", "path to a BhootOS story JSON file")
+    .command("intro")
+    .description("show the full BhootOS boot sequence")
     .allowExcessArguments(false)
-    .action(async (storyFile: string, _options, command: Command) => {
+    .action(async (_options: Readonly<Record<string, never>>, command: Command) => {
+      await executeProgram(runtime, false, command.optsWithGlobals<CliOptions>());
+    });
+
+  program
+    .command("play")
+    .description("play the bundled episode or an explicit story file")
+    .argument("[story-file]", "path to a custom BhootOS story JSON file")
+    .allowExcessArguments(false)
+    .action(async (
+      storyFile: string | undefined,
+      _options,
+      command: Command,
+    ) => {
       const options = command.optsWithGlobals<CliOptions>();
       const capabilities = detectCapabilities(runtime, options);
+      const bundledEpisode = storyFile === undefined;
+      const sourceName = storyFile ?? runtime.bundledStoryFile;
       const controller = new AbortController();
       const onSigint = (): void => {
         if (!controller.signal.aborted) {
@@ -102,18 +139,81 @@ function createProgram(
       runtime.addSigintListener(onSigint);
       try {
         setExitCode(
-          await runtime.playStory(storyFile, {
-            capabilities,
-            fast: options.fast === true,
-            signal: controller.signal,
-          }),
+          bundledEpisode
+            ? await runtime.runBundled("play", {
+                capabilities,
+                fast: options.fast === true,
+                signal: controller.signal,
+                interrupt: onSigint,
+              })
+            : await runtime.playStory(sourceName, {
+                capabilities,
+                fast: options.fast === true,
+                signal: controller.signal,
+                bundledEpisode: false,
+                interrupt: onSigint,
+              }),
         );
       } finally {
         runtime.removeSigintListener(onSigint);
       }
     });
 
+  for (const [name, description] of [
+    ["continue", "resume the latest Kaun Hai? save"],
+    ["restart", "clear the active save and restart Kaun Hai?"],
+    ["endings", "show discovered Kaun Hai? endings"],
+  ] as const) {
+    program
+      .command(name)
+      .description(description)
+      .allowExcessArguments(false)
+      .action(async (_options, command: Command) => {
+        const options = command.optsWithGlobals<CliOptions>();
+        setExitCode(await executeBundledInteractive(runtime, name, options));
+      });
+  }
+
+  program
+    .command("validate")
+    .description("validate a Story Document without playing it")
+    .argument("<story-file>", "path to a BhootOS story JSON file")
+    .allowExcessArguments(false)
+    .action(async (storyFile: string) => {
+      setExitCode(await runtime.validateStory(storyFile));
+    });
+
+  program
+    .command("create-story")
+    .description("create a minimal Story Document v2 project")
+    .argument("<name>", "lowercase story project name")
+    .allowExcessArguments(false)
+    .action(async (name: string) => {
+      setExitCode(await runtime.createStory(name, runtime.workingDirectory));
+    });
+
   return program;
+}
+
+async function executeBundledInteractive(
+  runtime: CliRuntime,
+  command: BundledCommand,
+  options: CliOptions,
+): Promise<number> {
+  const capabilities = detectCapabilities(runtime, options);
+  const controller = new AbortController();
+  const onSigint = (): void => controller.abort();
+  runtime.addSigintListener(onSigint);
+  try {
+    return await runtime.runBundled(command, {
+      capabilities,
+      fast: options.fast === true,
+      signal: controller.signal,
+      interrupt: onSigint,
+    });
+  } finally {
+    runtime.removeSigintListener(onSigint);
+  }
 }
 
 async function executeProgram(
@@ -160,4 +260,13 @@ function detectCapabilities(
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function isBrokenPipe(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "EPIPE"
+  );
 }

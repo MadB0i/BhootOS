@@ -15,12 +15,12 @@ StoryView and engine failures
 ```
 
 The presentation classes are intentionally not exported from the package root.
-They are an internal boundary for a future terminal gameplay adapter.
+They form the internal terminal adapter used by CLI gameplay.
 
 ## Active view layout
 
-An active view renders its narrative exactly as supplied, followed by one blank
-line and its choice labels in document order:
+An active view renders its narrative, followed by one blank line and its
+currently visible choice labels in order:
 
 ```text
 The door is open.
@@ -29,8 +29,12 @@ The door is open.
   2. Walk away
 ```
 
-Numbering begins at `1`. Each choice occupies one logical line. Node IDs, choice
-IDs, and target node IDs are not displayed. An empty choice array, malformed
+Numbering begins at `1`. On a known terminal width, narrative receives a small
+indent and text wraps between 28 and 88 visible columns. Choice continuations
+align beneath the label; ANSI escape sequences do not count toward width. With
+no reliable width, supplied line breaks and the legacy one-line choice layout
+are preserved. Node IDs, choice IDs, and target node IDs are not displayed. An
+empty choice array, malformed
 choice, or multiline forged choice label throws a `StoryPresentationError` with
 code `invalid-active-view`.
 
@@ -60,9 +64,11 @@ the exported default character and punctuation delays. It animates only when:
 - the renderer is not in fast mode; and
 - `animateText` was not explicitly set to `false`.
 
-Otherwise the narrative is written immediately and exactly, including
-intentional line breaks and Unicode content. Choices and ending metadata are
-written immediately after successful narrative completion.
+Otherwise the narrative is written immediately. During an interactive
+animation, Enter or Space reveals the remaining narrative. The temporary raw
+input listener consumes all animation-time keys, so a skip cannot select a
+choice. It is disabled in non-TTY, fast, and reduced-motion output and restores
+raw mode, flow state, and listeners after completion, cancellation, or error.
 
 ## Cancellation
 
@@ -109,6 +115,5 @@ if (viewed.ok) {
 }
 ```
 
-This layer only presents existing views and failures. Reading input, selecting
-choices, orchestrating gameplay, and exposing a CLI `play` command remain
-unimplemented.
+This layer only presents existing views and failures. The gameplay loop and CLI
+compose input separately.

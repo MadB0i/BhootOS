@@ -89,7 +89,7 @@ describe("Story Document v1 parsing", () => {
   });
 
   it("rejects unsupported schema versions", () => {
-    const result = parseStoryDocument({ ...minimalInput(), schemaVersion: 2 });
+    const result = parseStoryDocument({ ...minimalInput(), schemaVersion: 3 });
 
     expectDiagnostic(
       result,

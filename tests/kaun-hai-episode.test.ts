@@ -10,7 +10,7 @@ import {
   parseStoryJson,
   transitionStory,
   validateStoryDocument,
-  type StoryDocumentV1,
+  type StoryDocument,
   type StorySession,
 } from "../src/index.js";
 import { createNodeStoryFileReader } from "../src/story/node-file-reader.js";
@@ -65,8 +65,10 @@ const CYCLE_ROUTE = [
   "count-pattern-carefully",
   "count-taps-again",
   "count-pattern-carefully",
-  "test-rao-instruction",
-  "change-role-to-witness",
+  "doubt-note-check-corridor",
+  "read-frame-note",
+  "press-loose-panel",
+  "transcribe-original-statement",
   "record-falsified-closure",
   "compare-audit-times",
   "mark-signature-copied",
@@ -74,7 +76,7 @@ const CYCLE_ROUTE = [
   "sign-as-records-witness",
 ] as const;
 
-async function loadEpisode(): Promise<StoryDocumentV1> {
+async function loadEpisode(): Promise<StoryDocument> {
   const loaded = await loadStory(
     createNodeStoryFileReader(),
     EPISODE_PATH,
@@ -86,7 +88,7 @@ async function loadEpisode(): Promise<StoryDocumentV1> {
 }
 
 function traverse(
-  story: StoryDocumentV1,
+  story: StoryDocument,
   initialNodeId: string,
 ): ReadonlySet<string> {
   const nodeById = new Map(story.nodes.map((node) => [node.id, node]));
@@ -109,7 +111,7 @@ function traverse(
 }
 
 function playChoiceIds(
-  story: StoryDocumentV1,
+  story: StoryDocument,
   choiceIds: readonly string[],
 ): StorySession {
   const created = createStorySession(story);
@@ -143,7 +145,7 @@ function playChoiceIds(
 
     session = transitioned.session;
     const historyEntry = session.history[index];
-    expect(historyEntry).toEqual({
+    expect(historyEntry).toMatchObject({
       step: index + 1,
       fromNodeId: previousNodeId,
       choiceId,
@@ -172,6 +174,7 @@ describe("Kaun Hai? bundled episode", () => {
       expect(loaded.diagnostics).toEqual([]);
       expect(loaded.story.id).toBe("kaun-hai");
       expect(loaded.story.title).toBe("Kaun Hai?");
+      expect(loaded.story.schemaVersion).toBe(2);
     }
   });
 
@@ -267,6 +270,58 @@ describe("Kaun Hai? bundled episode", () => {
         );
       }),
     ).toBe(true);
+  });
+
+  it("uses collected evidence to control the truthful resolution", async () => {
+    const story = await loadEpisode();
+    const created = createStorySession(story);
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const atComplaint = transitionStory(story, created.session, {
+      type: "select-choice",
+      choiceId: "open-complaint",
+    });
+    expect(atComplaint.ok).toBe(true);
+    if (!atComplaint.ok) {
+      return;
+    }
+
+    const atTerminal = transitionStory(story, atComplaint.session, {
+      type: "select-choice",
+      choiceId: "query-closing-officer",
+    });
+    expect(atTerminal.ok).toBe(true);
+    if (!atTerminal.ok) {
+      return;
+    }
+
+    const atTruth = transitionStory(story, atTerminal.session, {
+      type: "select-choice",
+      choiceId: "ask-about-devendra",
+    });
+    expect(atTruth.ok).toBe(true);
+    if (!atTruth.ok) {
+      return;
+    }
+
+    const view = getStoryView(story, atTruth.session);
+    expect(view.ok).toBe(true);
+    if (view.ok && view.view.status === "active") {
+      expect(view.view.choices.map((choice) => choice.id)).not.toContain(
+        "record-falsified-closure",
+      );
+    }
+
+    const resolved = playChoiceIds(story, ENDING_ROUTES["complaint-closed"]);
+    expect(resolved.flags).toMatchObject({
+      "carbon-statement-entered": true,
+      "closure-recorded": true,
+      "signature-copied": true,
+    });
+    expect(resolved.inventory).toContain("carbon-copy");
   });
 
   it("meets editorial text and player-facing safety constraints", async () => {

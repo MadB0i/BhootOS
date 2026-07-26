@@ -2,6 +2,8 @@ import type { TerminalCapabilities } from "./capabilities.js";
 import { createTheme, type Theme } from "./theme.js";
 import { CancellationError, createScheduler, type Scheduler } from "./scheduler.js";
 import { Typewriter, type TypewriterOptions } from "./typewriter.js";
+import type { AnimationSkipper } from "../input/animation-skipper.js";
+import { terminalContentWidth } from "./layout.js";
 
 const FRAME_CONTENT_WIDTH = 44;
 const FRAME_PADDING = "  ";
@@ -29,12 +31,16 @@ export class TerminalRenderer {
   private readonly stderr: (text: string) => void;
   private readonly scheduler: Scheduler;
   private readonly fast: boolean;
+  private readonly animationSkipper: AnimationSkipper | undefined;
+  private readonly contentWidth: number | undefined;
 
   constructor(
     options: RendererIO & {
       capabilities: TerminalCapabilities;
       scheduler?: Scheduler;
       fast?: boolean;
+      animationSkipper?: AnimationSkipper;
+      columns?: number;
     },
   ) {
     this.caps = options.capabilities;
@@ -43,10 +49,16 @@ export class TerminalRenderer {
     this.stderr = options.stderr;
     this.scheduler = options.scheduler ?? createScheduler();
     this.fast = options.fast ?? false;
+    this.animationSkipper = options.animationSkipper;
+    this.contentWidth = terminalContentWidth(options.columns);
   }
 
   write(text: string): void {
     this.stdout(text);
+  }
+
+  getContentWidth(): number | undefined {
+    return this.contentWidth;
   }
 
   writeLine(text?: string): void {
@@ -73,12 +85,21 @@ export class TerminalRenderer {
 
   async typewrite(text: string, options?: TypewriterOptions): Promise<void> {
     const typewriter = new Typewriter({ write: this.stdout, scheduler: this.scheduler });
-    await typewriter.typewrite(text, this.animationOptions(options));
+    const animationOptions = this.animationOptions(options);
+    const skipSession =
+      animationOptions.enabled === true ? this.animationSkipper?.begin() : undefined;
+    try {
+      await typewriter.typewrite(text, {
+        ...animationOptions,
+        ...(skipSession === undefined ? {} : { skipSignal: skipSession.signal }),
+      });
+    } finally {
+      skipSession?.close();
+    }
   }
 
   async typewriteLine(text = "", options?: TypewriterOptions): Promise<void> {
-    const typewriter = new Typewriter({ write: this.stdout, scheduler: this.scheduler });
-    await typewriter.typewrite(text, this.animationOptions(options));
+    await this.typewrite(text, options);
     this.stdout("\n");
   }
 

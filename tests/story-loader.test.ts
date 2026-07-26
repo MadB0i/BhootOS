@@ -160,7 +160,7 @@ describe("loadStory", () => {
     [
       "unsupported schema",
       JSON.stringify({
-        schemaVersion: 2,
+        schemaVersion: 3,
         id: "story",
         title: "Story",
         entryNodeId: "ending",

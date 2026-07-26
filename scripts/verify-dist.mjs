@@ -46,6 +46,12 @@ assert(
   "library declarations must contain StoryDocumentV1",
 );
 assert(
+  declarationSource.includes("interface StoryDocumentV2") &&
+    declarationSource.includes("StoryConditionV2") &&
+    declarationSource.includes("StoryEffectV2"),
+  "library declarations must contain the Story Document v2 API",
+);
+assert(
   declarationSource.includes("parseStoryJson"),
   "library declarations must contain parseStoryJson",
 );
@@ -147,8 +153,8 @@ assert(
   "platform-neutral library build must not include the Node reader",
 );
 assert(
-  !cliSource.includes("setRawMode"),
-  "built CLI must not change terminal raw mode",
+  cliSource.includes("setRawMode"),
+  "built CLI must include isolated interactive animation skipping",
 );
 assert(
   !/process\.exit\(/u.test(cliSource),
@@ -379,8 +385,8 @@ assert(help.stdout.includes("play"), "--help must list play");
 const playHelp = run(["play", "--help"]);
 assert(playHelp.status === 0, "play --help must exit 0");
 assert(
-  playHelp.stdout.includes("<story-file>"),
-  "play --help must show its required story argument",
+  playHelp.stdout.includes("[story-file]"),
+  "play --help must show its optional custom story argument",
 );
 assert(
   playHelp.stdout.includes("Global Options:"),
@@ -391,10 +397,23 @@ const version = run(["--version"]);
 assert(version.status === 0, "--version must exit 0");
 assert(version.stdout.trim() === packageJson.version, "CLI version must match package.json");
 
-const defaultRun = run(["--fast", "--no-color", "--ascii"]);
-assert(defaultRun.status === 0, "default command must exit 0");
-assert(defaultRun.stdout.includes("Kaun hai wahan?"), "default command must render boot text");
-assert(!defaultRun.stdout.includes("\u001b["), "no-color output must contain no ANSI");
+const defaultDataDirectory = mkdtempSync(join(tmpdir(), "bhootos-default-data-"));
+try {
+  const defaultRun = run(
+    ["--fast", "--no-color", "--ascii"],
+    {
+      LOCALAPPDATA: defaultDataDirectory,
+      XDG_DATA_HOME: defaultDataDirectory,
+    },
+    "1\n2\n1\n1\n1\n1\n1\n1\n1\n",
+  );
+  assert(defaultRun.status === 0, "default command must reach an ending");
+  assert(defaultRun.stdout.includes("BHOOT/OS"), "default command must render its brief intro");
+  assert(defaultRun.stdout.includes("Kaun hai wahan?"), "default command must render the bundled story");
+  assert(!defaultRun.stdout.includes("\u001b["), "no-color output must contain no ANSI");
+} finally {
+  rmSync(defaultDataDirectory, { recursive: true, force: true });
+}
 
 const doctor = run(["doctor", "--no-color", "--ascii"]);
 assert(doctor.status === 0, "doctor must exit 0");
@@ -499,12 +518,29 @@ try {
     invalid.stderr.includes("Invalid choice attempt limit exhausted"),
     "invalid-attempt exhaustion must print its final error",
   );
+
+  const bundledFromUnrelatedDirectory = run(
+    ["play", "--fast", "--no-color", "--ascii"],
+    {
+      LOCALAPPDATA: playDirectory,
+      XDG_DATA_HOME: playDirectory,
+    },
+    "1\n2\n1\n1\n1\n1\n1\n1\n1\n",
+    playDirectory,
+  );
+  assert(
+    bundledFromUnrelatedDirectory.status === 0,
+    "bundled play must resolve outside the package working directory",
+  );
+  assert(
+    bundledFromUnrelatedDirectory.stdout.includes("Complaint Closed"),
+    "bundled play must reach its ending outside the package working directory",
+  );
 } finally {
   rmSync(playDirectory, { recursive: true, force: true });
 }
 
 for (const args of [
-  ["play"],
   ["play", "first.json", "second.json"],
   ["play", "story.json", "--unknown"],
 ]) {
@@ -571,11 +607,12 @@ assert(
 
 process.stdout.write("Built CLI and public API verification passed.\n");
 
-function run(args, extraEnv = {}, input) {
+function run(args, extraEnv = {}, input, cwd) {
   const result = spawnSync(process.execPath, [cliFile, ...args], {
     encoding: "utf8",
     env: { ...process.env, ...extraEnv },
     input,
+    cwd,
   });
 
   return {
