@@ -50,12 +50,36 @@ assert(
   "library declarations must contain requestStoryChoice",
 );
 assert(
+  declarationSource.includes("interface StoryGameplayRenderer"),
+  "library declarations must contain StoryGameplayRenderer",
+);
+assert(
+  declarationSource.includes("interface StoryChoiceRequester"),
+  "library declarations must contain StoryChoiceRequester",
+);
+assert(
+  declarationSource.includes("RunStoryResult"),
+  "library declarations must contain RunStoryResult",
+);
+assert(
+  declarationSource.includes("runStory"),
+  "library declarations must contain runStory",
+);
+assert(
   !declarationSource.includes("StoryViewRenderer"),
   "library declarations must not expose terminal presentation internals",
 );
 assert(
   !declarationSource.includes("NodeLineInput"),
   "library declarations must not expose the Node line adapter",
+);
+assert(
+  !declarationSource.includes("createStoryGameplayDependencies"),
+  "library declarations must not expose the internal gameplay adapter",
+);
+assert(
+  !declarationSource.includes("runStoryWithEngine"),
+  "library declarations must not expose the internal engine test boundary",
 );
 
 const publicApi = await import(pathToFileURL(libraryFile).href);
@@ -67,6 +91,7 @@ assert(
       "parseStoryDocument",
       "parseStoryJson",
       "requestStoryChoice",
+      "runStory",
       "selectChoiceFromLine",
       "transitionStory",
       "validateStoryDocument",
@@ -154,6 +179,51 @@ if (parsedStory.ok) {
         transitioned.session.step === 1 &&
         transitioned.session.history.length === 1,
       "built transitionStory must reach the ending and record history",
+    );
+
+    const renderedNodeIds = [];
+    const gameplay = await publicApi.runStory(
+      parsedStory.story,
+      {
+        renderer: {
+          render: async (view) => {
+            renderedNodeIds.push(view.nodeId);
+          },
+          renderInputError: () => {
+            throw new Error("built gameplay must not render an input error");
+          },
+          renderTransitionError: () => {
+            throw new Error("built gameplay must not render a transition error");
+          },
+        },
+        choiceRequester: {
+          request: async (view) => {
+            assert(
+              view.choices[0]?.id === "finish" &&
+                !("nextNodeId" in view.choices[0]),
+              "built gameplay requester must receive a player-safe view",
+            );
+            return {
+              status: "selected",
+              choiceId: "finish",
+              choiceNumber: 1,
+            };
+          },
+        },
+      },
+    );
+    assert(
+      gameplay.status === "ended" &&
+        gameplay.view.ending.id === "done" &&
+        gameplay.session.step === 1 &&
+        gameplay.session.history.length === 1 &&
+        gameplay.session.history[0]?.choiceId === "finish",
+      "built runStory must traverse a two-node story to its ending",
+    );
+    assert(
+      JSON.stringify(renderedNodeIds) ===
+        JSON.stringify(["start", "ending"]),
+      "built runStory must render the active view and ending once each",
     );
   }
 }

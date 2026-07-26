@@ -19,10 +19,10 @@ The current release provides:
 - choice selection by ID with typed failure outcomes
 - an internal capability-aware terminal presenter for engine views
 - reusable one-line input and numbered-choice selection boundaries
+- an injected, deterministic in-memory gameplay orchestrator
 
-It does not yet include an interactive terminal gameplay loop, repeated input
-orchestration, input controls, inventory, saves or the planned **Kaun Hai?**
-episode.
+It does not yet include a CLI story command, filesystem story loading, raw
+input controls, inventory, saves or the planned **Kaun Hai?** episode.
 
 ## Requirements
 
@@ -61,6 +61,7 @@ import {
   getStoryView,
   parseStoryJson,
   requestStoryChoice,
+  runStory,
   selectChoiceFromLine,
   transitionStory,
   validateStoryDocument,
@@ -96,7 +97,15 @@ the numbered-choice selector maps canonical 1-based input to the corresponding
 active-view choice ID. Invalid input, EOF, and cancellation remain distinct,
 and no retry or engine transition occurs implicitly. See
 [`docs/choice-input.md`](docs/choice-input.md). Complete gameplay orchestration
-is not implemented.
+is provided separately by the library API.
+
+`runStory` composes the engine, injected view rendering, and injected choice
+requests into a deterministic in-memory loop. It supports fresh or resumed
+sessions, bounded invalid-input retries, EOF, cancellation, cycles, and ending
+results without accessing files or process streams. See
+[`docs/gameplay-api.md`](docs/gameplay-api.md).
+
+BhootOS still has no `play` command; invoking its CLI does not play a story.
 
 ## License
 

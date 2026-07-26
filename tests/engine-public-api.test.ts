@@ -21,6 +21,7 @@ describe("public engine API", () => {
       "parseStoryDocument",
       "parseStoryJson",
       "requestStoryChoice",
+      "runStory",
       "selectChoiceFromLine",
       "transitionStory",
       "validateStoryDocument",

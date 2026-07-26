@@ -47,3 +47,13 @@ export type {
   RequestStoryChoiceOptions,
   RequestStoryChoiceResult,
 } from "./input/types.js";
+export { runStory } from "./gameplay/run-story.js";
+export type {
+  RunStoryOptions,
+  RunStoryResult,
+  StoryChoiceRequester,
+  StoryGameplayDependencies,
+  StoryGameplayErrorCode,
+  StoryGameplayRenderer,
+  StoryGameplayRenderOptions,
+} from "./gameplay/types.js";

@@ -107,9 +107,9 @@ interpretation happen only in the choice selector.
 
 ## Deliberate separation
 
-The input layer does not render choices or errors, perform an engine
+The input layer itself does not render choices or errors, perform an engine
 transition, load stories, or orchestrate repeated prompts. A caller may pass a
-successful `choiceId` to `transitionStory`, but that is an explicit separate
-operation.
+successful `choiceId` to `transitionStory`, or use the separate `runStory`
+library orchestrator to compose these operations.
 
-A complete gameplay loop and a `bhootos play` command are not implemented yet.
+A `bhootos play` command is not implemented.

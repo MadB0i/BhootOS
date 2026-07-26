@@ -11,6 +11,7 @@ describe("public story API", () => {
       "parseStoryDocument",
       "parseStoryJson",
       "requestStoryChoice",
+      "runStory",
       "selectChoiceFromLine",
       "transitionStory",
       "validateStoryDocument",

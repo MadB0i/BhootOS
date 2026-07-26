@@ -77,6 +77,10 @@ export class StoryViewRenderer {
     this.renderer.writeDangerError(error.message);
   }
 
+  renderInputError(message: string): void {
+    this.renderer.writeDangerError(message);
+  }
+
   private async renderNarrative(
     text: string,
     options: StoryViewRenderOptions,

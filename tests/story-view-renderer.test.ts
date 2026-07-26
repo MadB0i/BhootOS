@@ -510,6 +510,21 @@ describe("transition-error presentation", () => {
   });
 });
 
+describe("input-error presentation", () => {
+  it("writes the supplied message exactly once to stderr", () => {
+    const harness = makeHarness();
+
+    harness.presentation.renderInputError(
+      '"abc" is not a valid choice number.',
+    );
+
+    expect(joined(harness.stdout)).toBe("");
+    expect(joined(harness.stderr)).toBe(
+      '"abc" is not a valid choice number.\n',
+    );
+  });
+});
+
 describe("story engine presentation integration", () => {
   it("renders an engine active view and its ending without leaking a target", async () => {
     const parsed = parseStoryDocument({
