@@ -6,8 +6,10 @@ import type { StoryDocumentV1 } from "../src/index.js";
 describe("public story API", () => {
   it("exposes only the intended runtime functions", () => {
     expect(Object.keys(publicApi).sort()).toEqual([
+      "DEFAULT_STORY_FILE_MAX_BYTES",
       "createStorySession",
       "getStoryView",
+      "loadStory",
       "parseStoryDocument",
       "parseStoryJson",
       "requestStoryChoice",

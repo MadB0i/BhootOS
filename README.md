@@ -20,6 +20,7 @@ The current release provides:
 - an internal capability-aware terminal presenter for engine views
 - reusable one-line input and numbered-choice selection boundaries
 - an injected, deterministic in-memory gameplay orchestrator
+- validated story loading through an injected text-reader boundary
 
 It does not yet include a CLI story command, filesystem story loading, raw
 input controls, inventory, saves or the planned **Kaun Hai?** episode.
@@ -59,6 +60,7 @@ Global options may appear before or after `doctor`.
 import {
   createStorySession,
   getStoryView,
+  loadStory,
   parseStoryJson,
   requestStoryChoice,
   runStory,
@@ -66,6 +68,7 @@ import {
   transitionStory,
   validateStoryDocument,
   type LineInput,
+  type StoryTextReader,
   type StoryDocumentV1,
 } from "bhootos";
 ```
@@ -106,6 +109,13 @@ results without accessing files or process streams. See
 [`docs/gameplay-api.md`](docs/gameplay-api.md).
 
 BhootOS still has no `play` command; invoking its CLI does not play a story.
+
+`loadStory` reads text through an injected platform-neutral reader, enforces a
+configurable 1 MiB default limit, and reuses the existing JSON parser and graph
+validator. It preserves source names and document diagnostic paths while
+keeping the Node filesystem adapter internal. See
+[`docs/story-loading.md`](docs/story-loading.md). Story files still cannot be
+played through the CLI.
 
 ## License
 

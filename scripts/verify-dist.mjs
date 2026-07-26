@@ -7,6 +7,7 @@ const cliPath = new URL("../dist/cli.js", import.meta.url);
 const cliFile = fileURLToPath(cliPath);
 const cliSource = readFileSync(cliPath, "utf8");
 const libraryFile = fileURLToPath(new URL("../dist/index.js", import.meta.url));
+const librarySource = readFileSync(libraryFile, "utf8");
 const declarationSource = readFileSync(
   new URL("../dist/index.d.ts", import.meta.url),
   "utf8",
@@ -66,6 +67,22 @@ assert(
   "library declarations must contain runStory",
 );
 assert(
+  declarationSource.includes("interface StoryTextReader"),
+  "library declarations must contain StoryTextReader",
+);
+assert(
+  declarationSource.includes("LoadStoryResult"),
+  "library declarations must contain LoadStoryResult",
+);
+assert(
+  declarationSource.includes("DEFAULT_STORY_FILE_MAX_BYTES"),
+  "library declarations must contain the default story size limit",
+);
+assert(
+  declarationSource.includes("loadStory"),
+  "library declarations must contain loadStory",
+);
+assert(
   !declarationSource.includes("StoryViewRenderer"),
   "library declarations must not expose terminal presentation internals",
 );
@@ -81,13 +98,31 @@ assert(
   !declarationSource.includes("runStoryWithEngine"),
   "library declarations must not expose the internal engine test boundary",
 );
+assert(
+  !declarationSource.includes("createNodeStoryFileReader"),
+  "library declarations must not expose the Node story reader",
+);
+assert(
+  !declarationSource.includes("NodeStoryFileSystem"),
+  "library declarations must not expose the test filesystem boundary",
+);
+assert(
+  !librarySource.includes("node:fs"),
+  "platform-neutral library build must not import node:fs",
+);
+assert(
+  !librarySource.includes("node-file-reader"),
+  "platform-neutral library build must not include the Node reader",
+);
 
 const publicApi = await import(pathToFileURL(libraryFile).href);
 assert(
   JSON.stringify(Object.keys(publicApi).sort()) ===
     JSON.stringify([
+      "DEFAULT_STORY_FILE_MAX_BYTES",
       "createStorySession",
       "getStoryView",
+      "loadStory",
       "parseStoryDocument",
       "parseStoryJson",
       "requestStoryChoice",
@@ -226,6 +261,73 @@ if (parsedStory.ok) {
       "built runStory must render the active view and ending once each",
     );
   }
+}
+
+const loadingJson =
+  '{"schemaVersion":1,"id":"loaded-verify","title":"Loaded Verify","entryNodeId":"start","nodes":[{"id":"start","text":"Choose.","choices":[{"id":"finish","label":"Finish","nextNodeId":"ending"}]},{"id":"ending","text":"Done.","ending":{"id":"loaded-done","title":"Done"}}]}';
+let loadingReadCalls = 0;
+const loadedStory = await publicApi.loadStory(
+  {
+    read: async (source, options) => {
+      loadingReadCalls += 1;
+      assert(source === "memory:verify", "built loader must preserve its source");
+      assert(
+        options.maxBytes === publicApi.DEFAULT_STORY_FILE_MAX_BYTES,
+        "built loader must forward its default byte limit",
+      );
+      return {
+        ok: true,
+        sourceName: source,
+        text: loadingJson,
+        byteLength: loadingJson.length,
+      };
+    },
+  },
+  "memory:verify",
+);
+assert(
+  loadedStory.ok === true &&
+    loadedStory.sourceName === "memory:verify" &&
+    loadedStory.story.id === "loaded-verify" &&
+    loadingReadCalls === 1,
+  "built loadStory must return a validated story from an injected reader",
+);
+if (loadedStory.ok) {
+  const rendered = [];
+  const playedLoadedStory = await publicApi.runStory(
+    loadedStory.story,
+    {
+      renderer: {
+        render: async (view) => {
+          rendered.push(view.nodeId);
+        },
+        renderInputError: () => {
+          throw new Error("loaded story must not render an input error");
+        },
+        renderTransitionError: () => {
+          throw new Error("loaded story must not render a transition error");
+        },
+      },
+      choiceRequester: {
+        request: async () => ({
+          status: "selected",
+          choiceId: "finish",
+          choiceNumber: 1,
+        }),
+      },
+    },
+  );
+  assert(
+    playedLoadedStory.status === "ended" &&
+      playedLoadedStory.view.ending.id === "loaded-done" &&
+      playedLoadedStory.session.step === 1 &&
+      playedLoadedStory.session.history.length === 1,
+    "built loaded story must reach its expected ending",
+  );
+  assert(
+    JSON.stringify(rendered) === JSON.stringify(["start", "ending"]),
+    "built loaded story must render active and ending views once",
+  );
 }
 
 const help = run(["--help"]);

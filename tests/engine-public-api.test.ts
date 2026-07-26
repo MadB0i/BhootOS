@@ -16,8 +16,10 @@ import * as publicApi from "../src/index.js";
 describe("public engine API", () => {
   it("exposes the intended story and engine runtime functions", () => {
     expect(Object.keys(publicApi).sort()).toEqual([
+      "DEFAULT_STORY_FILE_MAX_BYTES",
       "createStorySession",
       "getStoryView",
+      "loadStory",
       "parseStoryDocument",
       "parseStoryJson",
       "requestStoryChoice",

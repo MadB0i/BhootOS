@@ -1,9 +1,13 @@
 export {
   parseStoryDocument,
   parseStoryJson,
+  loadStory,
   validateStoryDocument,
+  DEFAULT_STORY_FILE_MAX_BYTES,
 } from "./story/index.js";
 export type {
+  LoadStoryOptions,
+  LoadStoryResult,
   StoryChoiceV1,
   StoryDiagnostic,
   StoryDiagnosticCode,
@@ -12,6 +16,12 @@ export type {
   StoryEndingV1,
   StoryNodeV1,
   StoryParseResult,
+  StoryLoadErrorCode,
+  StoryLoadStage,
+  StoryReadErrorCode,
+  StoryTextReader,
+  StoryTextReadOptions,
+  StoryTextReadResult,
   StoryValidationResult,
 } from "./story/index.js";
 export {
