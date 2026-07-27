@@ -2,10 +2,7 @@
 
 > A haunted terminal runtime for interactive horror stories.
 
-<!--
-Demo slot: replace the terminal excerpt below with the reviewed demo GIF after
-recording it with docs/demo-recording.md. No demo asset is committed yet.
--->
+[![CI](https://github.com/MadB0i/BhootOS/actions/workflows/ci.yml/badge.svg)](https://github.com/MadB0i/BhootOS/actions/workflows/ci.yml)
 
 ```text
 BHOOT/OS
@@ -14,6 +11,8 @@ Haunted Terminal Runtime
 Human processes detected: 1
 Unknown processes detected: 2
 
+COMPLAINT 108/1998 — RESOLVED
+
 Kaun hai wahan?
 
   1. Open complaint 108
@@ -21,191 +20,92 @@ Kaun hai wahan?
   3. Go to the locked corridor
 ```
 
-**Run the bundled episode from a source checkout:**
-
-```bash
+```powershell
 corepack pnpm install --frozen-lockfile
 corepack pnpm build
 node dist/cli.js
 ```
 
-Play the bundled Indian horror-comedy **Kaun Hai?**, or write a branching
-terminal story without changing the engine. BhootOS requires Node.js 20 or
-newer; its CI matrix covers Windows and Ubuntu on Node.js 20 and 24.
+BhootOS is not a scripted terminal mock-up: it separates a reusable narrative
+engine from its CLI, then proves that boundary with a complete stateful episode.
 
-## What is BhootOS?
+## A runtime with a story inside
 
-BhootOS is both a playable terminal story and a reusable TypeScript narrative
-runtime. It ships with **Kaun Hai?**, a complete four-ending episode set in the
-administrative office of an old temple trust on a monsoon night.
+BhootOS is three things that share one deliberately small architecture:
 
-Stories are versioned JSON documents. The parser and validator check their
-structure and graph before play; the engine then exposes visible choices,
-applies state changes in order, and records immutable history. Authors work in
-story files rather than editing engine source.
+- **A playable experience.** The bundled episode, **Kaun Hai?**, is a complete
+  Indian horror-comedy with persistent progress and four distinct endings.
+- **A story engine.** Versioned JSON documents define narrative, choices,
+  conditions, inventory, effects, and endings without executable story code.
+- **A TypeScript runtime.** Parsing, validation, immutable sessions, player-safe
+  views, transitions, numbered input, and gameplay orchestration form a reusable
+  platform-neutral API.
 
-## Why it is different
+The cross-platform Node CLI supplies the edges: files, terminal streams,
+signals, bundled content, and local saves. That separation is tested in the
+built output, not just described in a diagram.
 
-- **A real episode, not a sample scene.** `Kaun Hai?` has 23 nodes, four
-  distinct endings, persistent progress, and ending discovery.
-- **Versioned story contracts.** Story Document v1 keeps static stories simple;
-  v2 adds declared flags, inventory, conditions, effects, and ending gates.
-- **Validation before improvisation.** Deterministic diagnostics catch broken
-  references, unreachable content, invalid state operations, and active nodes
-  with no path to an ending before the first prompt.
-- **State you can inspect.** Sessions are immutable and replay-validated, so
-  forged history or corrupted saves are rejected instead of trusted.
-- **Project discipline.** Strict TypeScript, cross-platform CI, built-package
-  boundary checks, scenario tests, and installed-tarball verification are part
-  of the release candidate.
+## Kaun Hai?
 
-## Play
+At 2:13 a.m., a monsoon power cut leaves a repair technician alone in the
+administrative office of an old temple trust. An obsolete complaint terminal
+switches itself on and reopens case **108/1998**.
 
-BhootOS is currently installed and run from a source checkout:
+The record connects a missing night clerk, falsified administrative entries,
+a copied signature, and an inquiry that never happened. Damp paper remembers
+what the database does not. A brass service bell keeps asking for a witness.
+The terminal, like any determined office system, would prefer somebody to fill
+the wrong field.
 
-```bash
+The story keeps its supernatural tension quiet and its comedy bureaucratic.
+The temple, faith, and worshippers are treated respectfully; the wrongdoing
+belongs to the office, its records, and the people who altered them.
+
+**Kaun Hai?** contains 23 nodes and four endings. This README does not reveal
+solutions, evidence combinations, or route requirements.
+
+## Run from source
+
+Requirements:
+
+- Node.js 20 or newer
+- Corepack
+- Git
+
+```powershell
+git clone https://github.com/MadB0i/BhootOS.git
+cd BhootOS
 corepack pnpm install --frozen-lockfile
 corepack pnpm build
 node dist/cli.js
 ```
 
-The main player flow from that checkout is:
+> **Distribution status:** `bhootos` is not published on npm. The supported
+> way to install and run it today is from this repository.
 
-```bash
+### Player commands
+
+```powershell
 node dist/cli.js
 node dist/cli.js play
-node dist/cli.js play ./my-story/story.json
+node dist/cli.js play ./path/to/story.json
 node dist/cli.js continue
 node dist/cli.js restart
 node dist/cli.js endings
 ```
 
-- `bhootos` adds a brief BhootOS introduction, then starts a fresh bundled run.
-- `play` starts the bundled episode, or plays the supplied v1/v2 story file.
+- No command, or `play`, starts a fresh **Kaun Hai?** run.
+- `play <story-file>` runs one explicit Story Document v1 or v2 file.
 - `continue` resumes the active bundled save.
-- `restart` replaces the active bundled run while preserving valid discovered
-  endings.
-- `endings` shows discovered ending titles and hides the rest.
+- `restart` starts over while retaining valid discovered endings.
+- `endings` reveals discovered titles and keeps the rest hidden.
 
-Bundled play autosaves after each successful choice. Custom story files are not
-autosaved in this release.
+Bundled play autosaves after every successful choice. Explicit custom story
+files are deliberately not autosaved.
 
-## Meet *Kaun Hai?*
+### Terminal controls
 
-At 2:13 a.m., a monsoon power cut leaves a repair technician alone in an old
-temple-trust office. A dead complaint terminal switches itself on and reopens a
-case from 1998—one closed without an investigation.
-
-The trail runs through a falsified bureaucratic record, damp paper, and a
-question the office never answered. Its four endings balance quiet horror with
-dry administrative comedy. The wrongdoing belongs to the office and its
-records; the temple, faith, and worshippers are treated respectfully.
-
-## Build your own story
-
-Story Document v2 keeps narrative and state in readable JSON. This small
-example has one flag, one inventory item, one condition, one effect, and one
-ending:
-
-```json
-{
-  "schemaVersion": 2,
-  "id": "haunted-station",
-  "title": "Haunted Station",
-  "entryNodeId": "platform",
-  "initialState": {
-    "flags": {
-      "signal-lit": false
-    },
-    "inventory": ["brass-key"]
-  },
-  "nodes": [
-    {
-      "id": "platform",
-      "text": "The last signal box is still locked.",
-      "choices": [
-        {
-          "id": "open-signal-box",
-          "label": "Use the brass key",
-          "nextNodeId": "control-room",
-          "requires": {
-            "type": "has-item",
-            "item": "brass-key"
-          },
-          "effects": [
-            {
-              "type": "set-flag",
-              "flag": "signal-lit",
-              "value": true
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "control-room",
-      "text": "A red signal wakes beyond the empty platform.",
-      "ending": {
-        "id": "last-train",
-        "title": "The Last Train"
-      }
-    }
-  ]
-}
-```
-
-Create, validate, and play a starter project:
-
-```bash
-node dist/cli.js create-story haunted-station
-node dist/cli.js validate ./haunted-station/story.json
-node dist/cli.js play ./haunted-station/story.json
-```
-
-Start with the [story-authoring guide](docs/story-authoring.md) and
-[Story Document v2 reference](docs/story-format-v2.md). Static stories can
-continue to use the supported [v1 format](docs/story-format-v1.md).
-
-## Features
-
-### For players
-
-- Bundled four-ending episode with autosave, continue, restart, and ending
-  discovery
-- Numbered choices with no hidden internal IDs
-- Color-free, ASCII, reduced-motion, and fast output modes
-- Local save validation and explicit recovery behavior
-
-### For authors
-
-- Story Document v1 and v2
-- Source-aware structural, graph, and state diagnostics
-- Flags, inventory, nested conditions, and ordered atomic effects
-- Starter generation and standalone validation commands
-
-### For developers
-
-- Strict TypeScript with exact optional properties
-- Immutable deterministic engine and player-safe views
-- Platform-neutral ESM library API
-- Built-CLI, scenario, package-content, and installed-tarball checks
-- Windows/Ubuntu CI matrix for pushes, pull requests, and manual checks
-
-## CLI reference
-
-| Command | Purpose |
-| --- | --- |
-| `bhootos` | Show the brief brand intro and start a fresh bundled run. |
-| `bhootos play [story-file]` | Play `Kaun Hai?` or one explicit v1/v2 file. |
-| `bhootos continue` | Resume the active bundled save. |
-| `bhootos restart` | Restart bundled play while retaining valid ending history. |
-| `bhootos endings` | List discovered ending titles and hidden slots. |
-| `bhootos validate <story-file>` | Parse and validate without playing or writing. |
-| `bhootos create-story <name>` | Create a minimal Story Document v2 project. |
-| `bhootos doctor` | Report detected terminal capabilities. |
-| `bhootos intro` | Show the full BhootOS boot sequence. |
-
-Global options may appear before or after a command:
+Global options can appear before or after a command:
 
 ```text
 --no-color
@@ -214,40 +114,73 @@ Global options may appear before or after a command:
 --fast
 ```
 
-See the [full CLI reference](docs/cli-reference.md) for exit codes and command
-behavior.
+Enter or Space reveals the remainder of animated text without choosing an
+option. `Ctrl+C` cancels cleanly, restores temporary terminal state, and exits
+with code 130.
 
-## Architecture
+## Write a story
+
+Create a minimal Story Document v2 project, validate it, and play it with the
+same production parser and validator used by the bundled episode:
+
+```powershell
+node dist/cli.js create-story haunted-station
+node dist/cli.js validate ./haunted-station/story.json
+node dist/cli.js play ./haunted-station/story.json
+```
+
+Story files are plain, versioned JSON:
+
+- **v1** describes static branching graphs and remains fully supported.
+- **v2** adds declared flags, inventory, nested conditions, ordered effects,
+  conditional choices, and ending requirements.
+
+Validation reports ordered, source-aware diagnostics for malformed fields,
+duplicate identifiers, broken references, unreachable content, invalid state
+operations, and active nodes with no path to an ending. It never evaluates
+story content as JavaScript or dispatches it as a shell command.
+
+Start with the checked-in [minimal story](examples/minimal-story.json), then
+read the [authoring guide](docs/story-authoring.md) and
+[Story Document v2 reference](docs/story-format-v2.md). The
+[v1 reference](docs/story-format-v1.md) documents the supported static format.
+
+## Under the terminal
 
 ```text
 Story JSON
-    |
-Reader boundary -> Parser + Validator -> Frozen Story
-                                           |
-                                 Immutable Session Engine
-                                           |
-                                  Gameplay Orchestrator
-                                      /           \
-                               Renderer         Choice Input
-                                      \           /
-                                  Node CLI + Local Saves
+   |
+reader -> parser -> validator -> frozen story
+                                |
+                      session / view / transition
+                                |
+                    in-memory gameplay loop
+                         /              \
+                  renderer          choice input
+
+CLI adapters: Node files, terminal streams, signals, bundled content, saves
 ```
 
-Parsing, validation, sessions, views, transitions, numbered input, and gameplay
-orchestration form the platform-neutral library. Node file access, process
-signals, terminal streams, bundled content, and saves stay behind the CLI
-boundary.
+The boundaries are intentional:
 
-Stories are data only: no story field is evaluated as JavaScript or dispatched
-as a shell command. The full boundary design is documented in
-[Architecture](docs/architecture.md); engine and orchestration contracts live
-in the [engine API](docs/engine-api.md) and
-[gameplay API](docs/gameplay-api.md).
+- The parser accepts unknown JSON and returns a frozen story or ordered
+  diagnostics.
+- The validator checks structure, references, graph reachability, ending paths,
+  and bounded v2 state semantics.
+- The engine exposes immutable sessions and player-safe views. Every supplied
+  session is replayed from the entry state before it can be viewed or changed.
+- V2 effects apply to temporary state in document order and commit atomically.
+- `runStory` coordinates injected rendering and choice input without owning a
+  terminal, filesystem, or process stream.
+- The CLI resolves bundled content relative to its own module, not the current
+  working directory.
 
-## Library API
+The complete design lives in [docs/architecture.md](docs/architecture.md).
 
-The package root exposes the story and engine contracts without exporting
-terminal or save internals:
+## Public TypeScript API
+
+After a source build, the platform-neutral ESM API and its declarations are in
+`dist/index.js` and `dist/index.d.ts`:
 
 ```ts
 import {
@@ -255,110 +188,128 @@ import {
   getStoryView,
   parseStoryJson,
   transitionStory,
-} from "bhootos";
+} from "./dist/index.js";
 
-export function chooseFirstVisibleOption(json: string) {
-  const parsed = parseStoryJson(json, "story.json");
-  if (!parsed.ok) throw new Error("Story validation failed.");
-
-  const created = createStorySession(parsed.story);
-  if (!created.ok) throw new Error("Session creation failed.");
-
-  const viewed = getStoryView(parsed.story, created.session);
-  if (!viewed.ok || viewed.view.status !== "active") {
-    throw new Error("Expected an active story view.");
-  }
-
-  const choice = viewed.view.choices[0];
-  if (choice === undefined) throw new Error("No visible choice.");
-
-  const next = transitionStory(parsed.story, created.session, {
-    type: "select-choice",
-    choiceId: choice.id,
-  });
-
-  if (!next.ok) throw new Error(next.message);
-  return next.view;
+const parsed = parseStoryJson(json, "story.json");
+if (!parsed.ok) {
+  throw new Error(parsed.diagnostics.map(({ message }) => message).join("\n"));
 }
+
+const created = createStorySession(parsed.story);
+if (!created.ok) throw new Error(created.message);
+
+const current = getStoryView(parsed.story, created.session);
+if (!current.ok || current.view.status !== "active") {
+  throw new Error("Expected an active story.");
+}
+
+const firstChoice = current.view.choices[0];
+if (firstChoice === undefined) throw new Error("No visible choice.");
+
+const next = transitionStory(parsed.story, created.session, {
+  type: "select-choice",
+  choiceId: firstChoice.id,
+});
 ```
 
-For a complete injected renderer/requester loop, see the
-[gameplay API guide](docs/gameplay-api.md).
+The public module also exports the loader boundary, numbered choice selection,
+and the injected `runStory` orchestration API. It does not export Node file
+access, terminal composition, save paths, or author-command adapters.
 
-## Accessibility and terminal support
+See the [engine API](docs/engine-api.md),
+[gameplay API](docs/gameplay-api.md), and
+[story-loading contract](docs/story-loading.md) for typed results and failure
+behavior.
 
-- `--no-color` removes ANSI color, including when color is otherwise forced.
-- `--ascii` replaces Unicode borders and markers with plain ASCII.
-- `--reduced-motion` disables narrative animation for accessibility.
-- `--fast` disables animation for testing, recording, and quick replay.
-- Non-TTY output uses the same line protocol without screen clearing or raw
-  terminal mode; color is disabled unless explicitly forced.
-- During interactive animation, Enter or Space reveals the remaining text
-  without selecting a choice.
-- `Ctrl+C` requests cancellation, restores temporary terminal state, and exits
-  with code 130.
+## Engineering constraints
 
-Behavior varies with terminal capabilities; BhootOS does not claim identical
-rendering in every terminal emulator. Presentation details are in
-[Story presentation](docs/story-presentation.md).
+BhootOS is intentionally strict about the unglamorous parts:
 
-## Security and privacy
+- TypeScript `strict` mode, exact optional properties, unchecked-index
+  protection, and unused-code checks
+- Deterministic transitions with immutable, replay-validated history
+- Atomic v2 state effects and atomic bundled-save replacement
+- Strict UTF-8 reads capped at 1 MiB for stories and 256 KiB for saves
+- No runtime network requests, telemetry, dynamic story modules, or executable
+  story scripting
+- A public library bundle verified not to depend on Node filesystem or process
+  streams
+- Built-CLI scenarios, exact package-content inspection, and installation from
+  a locally produced tarball
+- Terminal behavior tested across animated, reduced-motion, ASCII, color-free,
+  TTY, and non-TTY paths
 
-BhootOS runs locally after installation. It makes no runtime network requests,
-collects no telemetry, and stores no secrets. Story and save files are JSON
-data; they cannot load modules or execute shell commands.
+## Verified baseline
 
-Bundled saves remain in the platform user-data directory. Story reads are
-limited to 1 MiB, save reads to 256 KiB, and both pass strict UTF-8, schema, and
-session checks. See the [save format](docs/save-format.md) and
-[security policy](SECURITY.md) for the exact boundaries and reporting process.
+The normal GitHub Actions workflow runs the complete project check on every
+push to `main`, on pull requests, and on manual dispatch:
+
+| Runner | Node 20 | Node 24 |
+| --- | :---: | :---: |
+| Ubuntu | passing | passing |
+| Windows | passing | passing |
+
+Current verified baseline:
+
+- **487 tests across 36 test files**
+- Typecheck passed
+- Build passed
+- Full `pnpm check` passed
+- Built CLI and bundled scenarios passed
+- Exact 11-file package inspection passed
+- Installed-tarball imports and commands passed
+- Full and production dependency audits report **zero known vulnerabilities**
+
+Package inspection and tarball installation are local verification boundaries;
+they do not imply registry publication.
+
+## Honest boundaries
+
+- There is one bundled episode and no remote story catalog.
+- Custom story files do not use the bundled autosave system.
+- Choices are numbered rather than presented as arrow-key menus.
+- There is no audio layer, network service, executable story code, or
+  randomness.
+- Deterministic validation catches structural and graph defects; it does not
+  pretend to be a symbolic proof of every possible stateful route.
+- Presentation adapts to terminal capabilities and is not pixel-identical
+  across every emulator.
+
+These limits keep the engine inspectable and the story format safe.
+
+## Documentation
+
+- [CLI commands and exit codes](docs/cli-reference.md)
+- [Story authoring](docs/story-authoring.md)
+- [Story Document v1](docs/story-format-v1.md)
+- [Story Document v2](docs/story-format-v2.md)
+- [Engine API](docs/engine-api.md)
+- [Gameplay API](docs/gameplay-api.md)
+- [Save format](docs/save-format.md)
+- [Terminal presentation](docs/story-presentation.md)
+
+The spoiler-containing design notes for **Kaun Hai?** are kept separately in
+[docs/kaun-hai-authoring-notes.md](docs/kaun-hai-authoring-notes.md).
 
 ## Development
 
-Use Node.js 20 or newer and the pinned pnpm 9.15.4:
-
-```bash
-corepack enable
+```powershell
 corepack pnpm install --frozen-lockfile
-corepack pnpm check
-```
-
-Focused commands:
-
-```bash
 corepack pnpm typecheck
 corepack pnpm test
 corepack pnpm build
+corepack pnpm check
+node scripts/verify-installed.mjs
 ```
 
-`check` typechecks, runs the test suite, builds the CLI and public library,
-smoke-tests distribution boundaries and bundled scenarios, and inspects the
-exact npm package contents.
+`pnpm check` typechecks source and tests, runs the full suite, builds the CLI and
+library, verifies public distribution boundaries, exercises bundled scenarios,
+and inspects the exact package contents.
 
-## Verification
-
-The current release candidate passes **487 automated tests across 36 test
-files**. Project verification also exercises the built CLI, all four bundled
-ending routes, save recovery, v1/v2 custom stories, installed-tarball imports
-and commands, and the exact package allowlist.
-
-The repository keeps the broader process visible in the
-[changelog](CHANGELOG.md), [contribution guide](CONTRIBUTING.md), and
-[demo-recording instructions](docs/demo-recording.md).
-
-## Project status
-
-BhootOS is a release candidate. Its local hostile audit, project checks, and
-GitHub Actions matrix pass.
-
-The `bhootos` package is not published on npm. Installation and execution are
-currently from source, there is no automatic package publishing, no npm token
-is required, and releases are not automated.
-
-## Contributing and license
-
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before proposing engine, CLI, or story
-changes. Report security issues through the process in
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before proposing engine, CLI,
+documentation, or story changes. Security reports follow
 [SECURITY.md](SECURITY.md).
 
-BhootOS is released under the [MIT License](LICENSE).
+## License
+
+BhootOS is open source under the [MIT License](LICENSE).
