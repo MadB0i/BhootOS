@@ -2,6 +2,8 @@ import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { validatePackageFiles } from "./package-files.mjs";
+
 const isWindows = process.platform === "win32";
 const npmCommand = isWindows ? (process.env["ComSpec"] ?? "cmd.exe") : "npm";
 const npmArguments = isWindows
@@ -33,24 +35,6 @@ if (result.status !== 0) {
 
 const packResults = JSON.parse(result.stdout);
 const files = packResults[0]?.files?.map(({ path }) => path).sort();
-const expected = [
-  "LICENSE",
-  "README.md",
-  "dist/chunk-TMWN4FMT.js",
-  "dist/chunk-TMWN4FMT.js.map",
-  "dist/cli.js",
-  "dist/cli.js.map",
-  "dist/index.d.ts",
-  "dist/index.js",
-  "dist/index.js.map",
-  "episodes/kaun-hai/story.json",
-  "package.json",
-];
-
-if (JSON.stringify(files) !== JSON.stringify(expected)) {
-  throw new Error(
-    `Unexpected package files:\n${JSON.stringify(files, null, 2)}`,
-  );
-}
+validatePackageFiles(files);
 
 process.stdout.write(`Package dry run verified ${String(files.length)} files.\n`);
