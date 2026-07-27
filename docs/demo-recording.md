@@ -33,4 +33,4 @@ vhs demo.tape
 
 Use only enough choices to show the intro, narrative, and numbered input.
 Review the recording for personal paths or save data before sharing it. Do not
-add the generated GIF to the npm `files` allowlist.
+add the generated GIF to the package `files` allowlist.

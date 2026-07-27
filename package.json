@@ -1,6 +1,7 @@
 {
   "name": "bhootos",
   "version": "0.1.0",
+  "private": true,
   "description": "A terminal foundation with a versioned interactive-fiction story API.",
   "type": "module",
   "main": "./dist/index.js",
@@ -56,8 +57,7 @@
     "verify:scenarios": "node scripts/verify-scenarios.mjs",
     "verify:installed": "node scripts/verify-installed.mjs",
     "check": "tsc --noEmit && vitest run && tsup && node scripts/verify-dist.mjs && node scripts/verify-scenarios.mjs && node scripts/verify-package.mjs",
-    "prepack": "tsup",
-    "prepublishOnly": "npm run check"
+    "prepack": "tsup"
   },
   "dependencies": {
     "chalk": "^5.0.0",

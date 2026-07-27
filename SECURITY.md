@@ -2,8 +2,8 @@
 
 ## Supported version
 
-BhootOS is pre-1.0. Security fixes are applied to the current main branch and
-the latest published version when one exists.
+BhootOS is pre-1.0 and is currently distributed from source. Security fixes
+are applied to the current main branch.
 
 ## Reporting
 

@@ -16,13 +16,15 @@ release yet.
 - narrow-terminal narrative and choice wrapping;
 - root bundled play with the full boot retained as `intro`;
 - Windows/Ubuntu CI on Node 20 and 24;
-- tag-only npm publishing with provenance.
+- source-based installation with npm publication disabled.
 
 ### Changed
 
 - `Kaun Hai?` now uses collected evidence to gate its strongest ending.
 - CLI help and documentation now describe the complete player and author
   workflow.
+- Package metadata is private, and the repository runs normal CI without
+  automated releases or package-publishing credentials.
 
 ### Compatibility
 

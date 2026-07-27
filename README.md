@@ -21,10 +21,12 @@ Kaun hai wahan?
   3. Go to the locked corridor
 ```
 
-**One-command launch after the pending npm release:**
+**Run the bundled episode from a source checkout:**
 
 ```bash
-npx bhootos
+corepack pnpm install --frozen-lockfile
+corepack pnpm build
+node dist/cli.js
 ```
 
 Play the bundled Indian horror-comedy **Kaun Hai?**, or write a branching
@@ -53,36 +55,29 @@ story files rather than editing engine source.
   with no path to an ending before the first prompt.
 - **State you can inspect.** Sessions are immutable and replay-validated, so
   forged history or corrupted saves are rejected instead of trusted.
-- **Release discipline.** Strict TypeScript, cross-platform CI, built-package
+- **Project discipline.** Strict TypeScript, cross-platform CI, built-package
   boundary checks, scenario tests, and installed-tarball verification are part
   of the release candidate.
 
 ## Play
 
-The intended public launch is deliberately short:
-
-```bash
-npx bhootos
-```
-
-The npm package has not been published yet. From a source checkout, the same
-bundled run is available now:
+BhootOS is currently installed and run from a source checkout:
 
 ```bash
 corepack pnpm install --frozen-lockfile
 corepack pnpm build
-node dist/cli.js --fast
+node dist/cli.js
 ```
 
-Once installed, the main player flow is:
+The main player flow from that checkout is:
 
 ```bash
-npx bhootos
-npx bhootos play
-npx bhootos play ./my-story/story.json
-npx bhootos continue
-npx bhootos restart
-npx bhootos endings
+node dist/cli.js
+node dist/cli.js play
+node dist/cli.js play ./my-story/story.json
+node dist/cli.js continue
+node dist/cli.js restart
+node dist/cli.js endings
 ```
 
 - `bhootos` adds a brief BhootOS introduction, then starts a fresh bundled run.
@@ -162,9 +157,9 @@ ending:
 Create, validate, and play a starter project:
 
 ```bash
-bhootos create-story haunted-station
-bhootos validate ./haunted-station/story.json
-bhootos play ./haunted-station/story.json
+node dist/cli.js create-story haunted-station
+node dist/cli.js validate ./haunted-station/story.json
+node dist/cli.js play ./haunted-station/story.json
 ```
 
 Start with the [story-authoring guide](docs/story-authoring.md) and
@@ -194,7 +189,7 @@ continue to use the supported [v1 format](docs/story-format-v1.md).
 - Immutable deterministic engine and player-safe views
 - Platform-neutral ESM library API
 - Built-CLI, scenario, package-content, and installed-tarball checks
-- Windows/Ubuntu CI matrix and a tag-only npm provenance workflow
+- Windows/Ubuntu CI matrix for pushes, pull requests, and manual checks
 
 ## CLI reference
 
@@ -342,8 +337,8 @@ exact npm package contents.
 
 ## Verification
 
-The current release candidate passes **479 automated tests across 35 test
-files**. Release verification also exercises the built CLI, all four bundled
+The current release candidate passes **487 automated tests across 36 test
+files**. Project verification also exercises the built CLI, all four bundled
 ending routes, save recovery, v1/v2 custom stories, installed-tarball imports
 and commands, and the exact package allowlist.
 
@@ -353,13 +348,12 @@ The repository keeps the broader process visible in the
 
 ## Project status
 
-BhootOS is a release candidate. Its local hostile audit and release checks
-pass; the configured GitHub Actions matrix still needs a successful remote run
-for the final candidate commit.
+BhootOS is a release candidate. Its local hostile audit, project checks, and
+GitHub Actions matrix pass.
 
-The `bhootos` package is not currently available on the public npm registry.
-Version `0.1.0` publication and npm provenance remain pending, so the source
-checkout instructions above are the working installation path today.
+The `bhootos` package is not published on npm. Installation and execution are
+currently from source, there is no automatic package publishing, no npm token
+is required, and releases are not automated.
 
 ## Contributing and license
 
